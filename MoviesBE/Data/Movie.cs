@@ -1,110 +1,110 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace MoviesBE.Data;
 
 public class Movie
 {
-    public bool Adult { get; set; }
+    public bool Adult { get; init; }
 
-    [JsonProperty("backdrop_path")]
-    public string? BackdropPath { get; set; }
+    [JsonPropertyName("backdrop_path")]
+    public string? BackdropPath { get; init; }
 
-    [JsonProperty("belongs_to_collection")]
-    public MovieCollection? BelongsToCollection { get; set; }
+    [JsonPropertyName("belongs_to_collection")]
+    public MovieCollection? BelongsToCollection { get; init; }
 
-    public long Budget { get; set; }
+    public long Budget { get; init; }
 
-    public List<Genre>? Genres { get; set; }
+    public List<Genre>? Genres { get; init; }
 
-    public string? Homepage { get; set; }
+    public string? Homepage { get; init; }
 
-    public int Id { get; set; }
+    public int Id { get; init; }
 
-    [JsonProperty("imdb_id")]
-    public string? ImdbId { get; set; }
+    [JsonPropertyName("imdb_id")]
+    public string? ImdbId { get; init; }
 
-    [JsonProperty("original_language")]
-    public string? OriginalLanguage { get; set; }
+    [JsonPropertyName("original_language")]
+    public string? OriginalLanguage { get; init; }
 
-    [JsonProperty("original_title")]
-    public string? OriginalTitle { get; set; }
+    [JsonPropertyName("original_title")]
+    public string? OriginalTitle { get; init; }
 
-    public string? Overview { get; set; }
+    public string? Overview { get; init; }
 
-    public double Popularity { get; set; }
+    public double Popularity { get; init; }
 
-    [JsonProperty("poster_path")]
-    public string? PosterPath { get; set; }
+    [JsonPropertyName("poster_path")]
+    public string? PosterPath { get; init; }
 
-    [JsonProperty("production_companies")]
-    public List<ProductionCompany>? ProductionCompanies { get; set; }
+    [JsonPropertyName("production_companies")]
+    public List<ProductionCompany>? ProductionCompanies { get; init; }
 
-    [JsonProperty("production_countries")]
-    public List<ProductionCountry>? ProductionCountries { get; set; }
+    [JsonPropertyName("production_countries")]
+    public List<ProductionCountry>? ProductionCountries { get; init; }
 
-    [JsonProperty("release_date")]
-    public string? ReleaseDate { get; set; }
+    [JsonPropertyName("release_date")]
+    public string? ReleaseDate { get; init; }
 
-    public long Revenue { get; set; }
+    public long Revenue { get; init; }
 
-    public int Runtime { get; set; }
+    public int Runtime { get; init; }
 
-    [JsonProperty("spoken_languages")]
-    public List<SpokenLanguage>? SpokenLanguages { get; set; }
+    [JsonPropertyName("spoken_languages")]
+    public List<SpokenLanguage>? SpokenLanguages { get; init; }
 
-    public string? Status { get; set; }
+    public string? Status { get; init; }
 
-    public string? Tagline { get; set; }
+    public string? Tagline { get; init; }
 
-    public string? Title { get; set; }
+    public string? Title { get; init; }
 
-    public bool Video { get; set; }
+    public bool Video { get; init; }
 
-    [JsonProperty("vote_average")]
-    public double VoteAverage { get; set; }
+    [JsonPropertyName("vote_average")]
+    public double VoteAverage { get; init; }
 
-    [JsonProperty("vote_count")]
-    public int VoteCount { get; set; }
+    [JsonPropertyName("vote_count")]
+    public int VoteCount { get; init; }
 
     public class Genre
     {
-        public int Id { get; set; }
-        public string? Name { get; set; }
+        public int Id { get; init; }
+        public string? Name { get; init; }
     }
 
     public class MovieCollection
     {
-        public int Id { get; set; }
-        public string? Name { get; set; }
-        [JsonProperty("poster_path")]
-        public string? PosterPath { get; set; }
-        [JsonProperty("backdrop_path")]
-        public string? BackdropPath { get; set; }
+        public int Id { get; init; }
+        public string? Name { get; init; }
+        [JsonPropertyName("poster_path")]
+        public string? PosterPath { get; init; }
+        [JsonPropertyName("backdrop_path")]
+        public string? BackdropPath { get; init; }
     }
 
     public class ProductionCompany
     {
-        public int Id { get; set; }
-        [JsonProperty("logo_path")]
-        public string? LogoPath { get; set; }
-        public string? Name { get; set; }
-        [JsonProperty("origin_country")]
-        public string? OriginCountry { get; set; }
+        public int Id { get; init; }
+        [JsonPropertyName("logo_path")]
+        public string? LogoPath { get; init; }
+        public string? Name { get; init; }
+        [JsonPropertyName("origin_country")]
+        public string? OriginCountry { get; init; }
     }
 
     public class ProductionCountry
     {
-        [JsonProperty("iso_3166_1")]
-        public string? Iso31661 { get; set; }
-        public string? Name { get; set; }
+        [JsonPropertyName("iso_3166_1")]
+        public string? Iso31661 { get; init; }
+        public string? Name { get; init; }
     }
 
     public class SpokenLanguage
     {
-        [JsonProperty("english_name")]
-        public string? EnglishName { get; set; }
-        [JsonProperty("iso_639_1")]
-        public string? Iso6391 { get; set; }
-        public string? Name { get; set; }
+        [JsonPropertyName("english_name")]
+        public string? EnglishName { get; init; }
+        [JsonPropertyName("iso_639_1")]
+        public string? Iso6391 { get; init; }
+        public string? Name { get; init; }
     }
 }

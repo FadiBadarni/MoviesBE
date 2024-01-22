@@ -1,11 +1,16 @@
 ﻿using System.Net.Http.Headers;
+using System.Text.Json;
 using MoviesBE.Data;
-using Newtonsoft.Json;
 
 namespace MoviesBE.Services;
 
 public class TmdbService
 {
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly string _apiReadAccessToken;
     private readonly string _baseUrl;
     private readonly HttpClient _httpClient;
@@ -20,7 +25,7 @@ public class TmdbService
         _baseUrl = configuration["TMDB:BaseUrl"] ?? throw new InvalidOperationException("Base URL is not configured.");
     }
 
-    public async Task<Movie> GetMovieAsync(int movieId)
+    public async Task<ServiceResult<Movie>> GetMovieAsync(int movieId)
     {
         var requestUri = $"{_baseUrl}movie/{movieId}";
         var request = new HttpRequestMessage(HttpMethod.Get, requestUri)
@@ -37,16 +42,17 @@ public class TmdbService
             using var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var responseContent = await response.Content.ReadAsStringAsync();
-            var movie = JsonConvert.DeserializeObject<Movie>(responseContent);
+            var movie = JsonSerializer.Deserialize<Movie>(responseContent, JsonSerializerOptions);
 
-            if (movie == null) throw new InvalidOperationException("Deserialization of the movie data returned null.");
+            if (movie == null)
+                return new ServiceResult<Movie>(null, false, "Movie not found");
 
-            return movie;
+            return new ServiceResult<Movie>(movie, true, null);
         }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Error fetching movie data for movie ID {MovieId}", movieId);
-            throw;
+            return new ServiceResult<Movie>(null, false, "Error fetching data from API");
         }
     }
 }
