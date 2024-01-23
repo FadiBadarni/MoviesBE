@@ -53,7 +53,7 @@ public class Movie
     public int Runtime { get; init; }
 
     [JsonPropertyName("spoken_languages")]
-    public List<SpokenLanguage>? SpokenLanguages { get; init; }
+    public List<SpokenLanguage>? SpokenLanguages { get; set; }
 
     public string? Status { get; init; }
 

@@ -27,11 +27,12 @@ public class Neo4JService : IAsyncDisposable
             {
                 var cursor = await tx.RunAsync(
                     @"MATCH (m:Movie {id: $id})
-                            OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
-                            WITH m, COLLECT(DISTINCT g) as genres
-                            OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
-                            RETURN m, genres, COLLECT(DISTINCT c) as companies
-                            ",
+                OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
+                OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
+                OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
+                RETURN m, COLLECT(DISTINCT g) as genres, COLLECT(DISTINCT c) as companies,
+                       COLLECT(DISTINCT pc) as countries, COLLECT(DISTINCT sl) as languages",
                     new { id = movieId });
 
                 if (await cursor.FetchAsync())
@@ -39,11 +40,16 @@ public class Neo4JService : IAsyncDisposable
                     var movieNode = cursor.Current["m"].As<INode>();
                     var genres = cursor.Current["genres"].As<List<INode>>().Select(ConvertNodeToGenre).ToList();
                     var companies = cursor.Current["companies"].As<List<INode>>().Select(ConvertNodeToCompany).ToList();
-                    // Construct the Movie object including the related data
+                    var countries = cursor.Current["countries"].As<List<INode>>().Select(ConvertNodeToCountry).ToList();
+                    var languages = cursor.Current["languages"].As<List<INode>>().Select(ConvertNodeToLanguage)
+                        .ToList();
+
                     var movie = ConvertNodeToMovie(movieNode);
                     movie.Genres = genres;
                     movie.ProductionCompanies = companies;
-                    // Handle other relationships similarly
+                    movie.ProductionCountries = countries;
+                    movie.SpokenLanguages = languages;
+
                     return movie;
                 }
 
@@ -361,6 +367,31 @@ public class Neo4JService : IAsyncDisposable
             OriginCountry = node.Properties.ContainsKey("originCountry")
                 ? node.Properties["originCountry"].As<string>()
                 : string.Empty
+        };
+    }
+
+    private static Movie.ProductionCountry ConvertNodeToCountry(IEntity node)
+    {
+        return new Movie.ProductionCountry
+        {
+            Iso31661 = node.Properties.ContainsKey("iso_3166_1")
+                ? node.Properties["iso_3166_1"].As<string>()
+                : string.Empty,
+            Name = node.Properties.ContainsKey("name") ? node.Properties["name"].As<string>() : string.Empty
+        };
+    }
+
+    private static Movie.SpokenLanguage ConvertNodeToLanguage(IEntity node)
+    {
+        return new Movie.SpokenLanguage
+        {
+            EnglishName = node.Properties.ContainsKey("englishName")
+                ? node.Properties["englishName"].As<string>()
+                : null,
+            Iso6391 = node.Properties.ContainsKey("iso_639_1")
+                ? node.Properties["iso_639_1"].As<string>()
+                : null,
+            Name = node.Properties.ContainsKey("name") ? node.Properties["name"].As<string>() : null
         };
     }
 }
