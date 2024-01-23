@@ -8,11 +8,13 @@ namespace MoviesBE.Controllers;
 [Route("[controller]")]
 public class MoviesController : ControllerBase
 {
+    private readonly Neo4JService _neo4JService;
     private readonly TmdbService _tmdbService;
 
-    public MoviesController(TmdbService tmdbService)
+    public MoviesController(TmdbService tmdbService, Neo4JService neo4JService)
     {
         _tmdbService = tmdbService;
+        _neo4JService = neo4JService;
     }
 
     [HttpGet("{id:int}")]
@@ -20,5 +22,27 @@ public class MoviesController : ControllerBase
     {
         var movie = await _tmdbService.GetMovieAsync(id);
         return Ok(movie);
+    }
+
+    [HttpGet("popular")]
+    public async Task<ActionResult<List<Movie>>> GetPopularMovies()
+    {
+        var movies = await _tmdbService.GetPopularMoviesAsync();
+        return Ok(movies);
+    }
+
+    [HttpGet("cached-popular")]
+    public async Task<ActionResult<List<Movie>>> GetCachedPopularMovies()
+    {
+        try
+        {
+            var movies = await _neo4JService.GetCachedPopularMoviesAsync();
+            return Ok(movies);
+        }
+        catch (Exception ex)
+        {
+            // Handle exceptions
+            return StatusCode(500, "Internal Server Error");
+        }
     }
 }

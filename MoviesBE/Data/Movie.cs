@@ -14,7 +14,10 @@ public class Movie
 
     public long Budget { get; init; }
 
-    public List<Genre>? Genres { get; init; }
+    public List<Genre>? Genres { get; set; }
+
+    [JsonPropertyName("genre_ids")]
+    public List<int>? GenreIds { get; init; }
 
     public string? Homepage { get; init; }
 

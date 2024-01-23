@@ -61,4 +61,76 @@ public class TmdbService
             return new ServiceResult<Movie>(null, false, "Error fetching data from API");
         }
     }
+
+    public async Task<List<Movie>> GetPopularMoviesAsync()
+    {
+        // First fetch the full list of genres
+        var genresLookup = await GetGenresAsync();
+
+        var requestUri = $"{_baseUrl}movie/popular";
+        var request = new HttpRequestMessage(HttpMethod.Get, requestUri)
+        {
+            Headers =
+            {
+                Accept = { new MediaTypeWithQualityHeaderValue("application/json") },
+                Authorization = new AuthenticationHeaderValue("Bearer", _apiReadAccessToken)
+            }
+        };
+
+        try
+        {
+            using var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var movieListResult = JsonSerializer.Deserialize<MovieListResult>(responseContent, JsonSerializerOptions);
+
+            if (movieListResult?.Results == null)
+            {
+                return new List<Movie>();
+            }
+
+            foreach (var movie in movieListResult.Results)
+            {
+                if (movie.GenreIds != null)
+                {
+                    movie.Genres = movie.GenreIds
+                        .Select(id => genresLookup.TryGetValue(id, out var genre) ? genre : null)
+                        .Where(g => g != null)
+                        .Cast<Movie.Genre>()
+                        .ToList();
+                }
+
+
+                // Save the movie along with its genres to Neo4j
+                await _neo4JService.SaveMovieAsync(movie);
+            }
+
+            return movieListResult.Results;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error fetching popular movies");
+            throw;
+        }
+    }
+
+    public async Task<Dictionary<int, Movie.Genre>> GetGenresAsync()
+    {
+        var requestUri = $"{_baseUrl}genre/movie/list";
+        var request = new HttpRequestMessage(HttpMethod.Get, requestUri)
+        {
+            Headers =
+            {
+                Accept = { new MediaTypeWithQualityHeaderValue("application/json") },
+                Authorization = new AuthenticationHeaderValue("Bearer", _apiReadAccessToken)
+            }
+        };
+
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var genresResult = JsonSerializer.Deserialize<GenresResult>(responseContent, JsonSerializerOptions);
+
+        return genresResult?.Genres.ToDictionary(g => g.Id) ?? new Dictionary<int, Movie.Genre>();
+    }
 }
