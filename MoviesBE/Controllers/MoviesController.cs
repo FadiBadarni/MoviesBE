@@ -32,17 +32,9 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet("cached-popular")]
-    public async Task<ActionResult<List<Movie>>> GetCachedPopularMovies()
+    public async Task<ActionResult<List<PopularMovie>>> GetCachedPopularMovies()
     {
-        try
-        {
-            var movies = await _neo4JService.GetCachedPopularMoviesAsync();
-            return Ok(movies);
-        }
-        catch (Exception ex)
-        {
-            // Handle exceptions
-            return StatusCode(500, "Internal Server Error");
-        }
+        var movies = await _neo4JService.GetCachedPopularMoviesAsync();
+        return Ok(movies);
     }
 }
