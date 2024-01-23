@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using MoviesBE.Data;
+using MoviesBE.DTOs;
 
 namespace MoviesBE.Services;
 
@@ -52,6 +53,9 @@ public class TmdbService
                 return new ServiceResult<Movie>(null, false, "Movie not found");
             }
 
+            var backdrops = await FetchMovieBackdropsAsync(movieId);
+            movie.Backdrops = backdrops.Take(5).ToList();
+
             await _neo4JService.SaveMovieAsync(movie);
             return new ServiceResult<Movie>(movie, true, null);
         }
@@ -59,6 +63,43 @@ public class TmdbService
         {
             _logger.LogError(ex, "Error fetching movie data for movie ID {MovieId}", movieId);
             return new ServiceResult<Movie>(null, false, "Error fetching data from API");
+        }
+    }
+
+    private async Task<List<MovieBackdrop>> FetchMovieBackdropsAsync(int movieId)
+    {
+        var backdropsUri = $"{_baseUrl}movie/{movieId}/images";
+        var request = new HttpRequestMessage(HttpMethod.Get, backdropsUri)
+        {
+            Headers =
+            {
+                Accept = { new MediaTypeWithQualityHeaderValue("application/json") },
+                Authorization = new AuthenticationHeaderValue("Bearer", _apiReadAccessToken)
+            }
+        };
+
+        try
+        {
+            using var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            var images = JsonSerializer.Deserialize<MovieImagesResponse>(responseContent, JsonSerializerOptions);
+            if (images?.Backdrops == null)
+            {
+                return new List<MovieBackdrop>();
+            }
+
+            return images.Backdrops.Select(backdrop => new MovieBackdrop
+            {
+                FilePath = backdrop.FilePath,
+                VoteAverage = backdrop.VoteAverage
+            }).ToList();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Error fetching backdrop data for movie ID {MovieId}", movieId);
+            return new List<MovieBackdrop>();
         }
     }
 

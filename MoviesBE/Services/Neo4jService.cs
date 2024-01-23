@@ -45,6 +45,8 @@ public class Neo4JService : IAsyncDisposable
                 {
                     await SaveSpokenLanguagesAsync(movie, tx);
                 }
+
+                await SaveMovieBackdropsAsync(movie, tx);
             });
         }
         finally
@@ -275,5 +277,27 @@ public class Neo4JService : IAsyncDisposable
             VoteCount = node.Properties.ContainsKey("voteCount") ? node.Properties["voteCount"].As<int>() : 0
             // Handle complex properties like Genres, ProductionCompanies, etc. here
         };
+    }
+
+    private static async Task SaveMovieBackdropsAsync(Movie movie, IAsyncQueryRunner tx)
+    {
+        if (movie.Backdrops == null)
+        {
+            return;
+        }
+
+        foreach (var backdrop in movie.Backdrops.Where(b => !string.IsNullOrEmpty(b.FilePath)))
+            await tx.RunAsync(
+                @"MERGE (b:Backdrop {filePath: $filePath})
+            ON CREATE SET b.voteAverage = $voteAverage
+            WITH b
+            MATCH (m:Movie {id: $movieId})
+            MERGE (m)-[:HAS_BACKDROP]->(b)",
+                new
+                {
+                    filePath = backdrop.FilePath,
+                    voteAverage = backdrop.VoteAverage,
+                    movieId = movie.Id
+                });
     }
 }
