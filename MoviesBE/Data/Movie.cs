@@ -69,6 +69,8 @@ public class Movie
     [JsonPropertyName("vote_count")]
     public int VoteCount { get; init; }
 
+    public List<MovieBackdrop>? Backdrops { get; set; }
+
     public class Genre
     {
         public int Id { get; init; }
