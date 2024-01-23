@@ -18,6 +18,46 @@ public class Neo4JService : IAsyncDisposable
         GC.SuppressFinalize(this);
     }
 
+    public async Task<Movie?> GetMovieByIdAsync(int movieId)
+    {
+        await using var session = _neo4JDriver.AsyncSession();
+        try
+        {
+            return await session.ExecuteReadAsync(async tx =>
+            {
+                var cursor = await tx.RunAsync(
+                    @"MATCH (m:Movie {id: $id})
+                            OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                            WITH m, COLLECT(DISTINCT g) as genres
+                            OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
+                            RETURN m, genres, COLLECT(DISTINCT c) as companies
+                            ",
+                    new { id = movieId });
+
+                if (await cursor.FetchAsync())
+                {
+                    var movieNode = cursor.Current["m"].As<INode>();
+                    var genres = cursor.Current["genres"].As<List<INode>>().Select(ConvertNodeToGenre).ToList();
+                    var companies = cursor.Current["companies"].As<List<INode>>().Select(ConvertNodeToCompany).ToList();
+                    // Construct the Movie object including the related data
+                    var movie = ConvertNodeToMovie(movieNode);
+                    movie.Genres = genres;
+                    movie.ProductionCompanies = companies;
+                    // Handle other relationships similarly
+                    return movie;
+                }
+
+                return null;
+            });
+        }
+        catch (Exception ex)
+        {
+            // Log the exception
+            return null;
+        }
+    }
+
+
     public async Task SaveMovieAsync(Movie movie)
     {
         await using var session = _neo4JDriver.AsyncSession();
@@ -299,5 +339,28 @@ public class Neo4JService : IAsyncDisposable
                     voteAverage = backdrop.VoteAverage,
                     movieId = movie.Id
                 });
+    }
+
+    private static Movie.Genre ConvertNodeToGenre(IEntity node)
+    {
+        return new Movie.Genre
+        {
+            Id = node.Properties.ContainsKey("id") ? node.Properties["id"].As<int>() : 0,
+            Name = node.Properties.ContainsKey("name") ? node.Properties["name"].As<string>() : string.Empty
+        };
+    }
+
+    private static Movie.ProductionCompany ConvertNodeToCompany(IEntity node)
+    {
+        return new Movie.ProductionCompany
+        {
+            Id = node.Properties.ContainsKey("id") ? node.Properties["id"].As<int>() : 0,
+            Name = node.Properties.ContainsKey("name") ? node.Properties["name"].As<string>() : string.Empty,
+            LogoPath =
+                node.Properties.ContainsKey("logoPath") ? node.Properties["logoPath"].As<string>() : string.Empty,
+            OriginCountry = node.Properties.ContainsKey("originCountry")
+                ? node.Properties["originCountry"].As<string>()
+                : string.Empty
+        };
     }
 }

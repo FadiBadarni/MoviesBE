@@ -31,6 +31,16 @@ public class TmdbService
 
     public async Task<ServiceResult<Movie>> GetMovieAsync(int movieId)
     {
+        // Check if the movie exists in the database
+        var movieInDb = await _neo4JService.GetMovieByIdAsync(movieId);
+
+        // If the movie exists in the database, return it
+        if (movieInDb != null)
+        {
+            return new ServiceResult<Movie>(movieInDb, true, null);
+        }
+
+        // If not, fetch from TMDB
         var requestUri = $"{_baseUrl}movie/{movieId}";
         var request = new HttpRequestMessage(HttpMethod.Get, requestUri)
         {
@@ -53,9 +63,11 @@ public class TmdbService
                 return new ServiceResult<Movie>(null, false, "Movie not found");
             }
 
+            // Fetch backdrops and assign to movie object
             var backdrops = await FetchMovieBackdropsAsync(movieId);
             movie.Backdrops = backdrops.Take(5).ToList();
 
+            // Save the new movie data to the database
             await _neo4JService.SaveMovieAsync(movie);
             return new ServiceResult<Movie>(movie, true, null);
         }

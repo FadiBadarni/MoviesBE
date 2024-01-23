@@ -40,10 +40,10 @@ public class Movie
     public string? PosterPath { get; init; }
 
     [JsonPropertyName("production_companies")]
-    public List<ProductionCompany>? ProductionCompanies { get; init; }
+    public List<ProductionCompany>? ProductionCompanies { get; set; }
 
     [JsonPropertyName("production_countries")]
-    public List<ProductionCountry>? ProductionCountries { get; init; }
+    public List<ProductionCountry>? ProductionCountries { get; set; }
 
     [JsonPropertyName("release_date")]
     public string? ReleaseDate { get; init; }
