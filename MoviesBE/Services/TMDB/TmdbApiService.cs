@@ -70,4 +70,12 @@ public class TmdbApiService
 
         return genresResult?.Genres?.ToDictionary(g => g.Id) ?? new Dictionary<int, Genre>();
     }
+
+    public async Task<List<MovieVideo>> FetchMovieVideosAsync(int movieId)
+    {
+        var requestUri = $"{_baseUrl}movie/{movieId}/videos";
+        var videosResponse = await _httpService.SendAndDeserializeAsync<MovieVideosResponse>(requestUri);
+
+        return videosResponse?.Videos ?? new List<MovieVideo>();
+    }
 }

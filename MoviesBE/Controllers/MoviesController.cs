@@ -39,4 +39,11 @@ public class MoviesController : ControllerBase
         var movies = await _movieRepository.GetCachedPopularMoviesAsync();
         return Ok(movies);
     }
+
+    [HttpGet("{id:int}/videos")]
+    public async Task<ActionResult<List<MovieVideo>>> GetMovieVideos(int id)
+    {
+        var videos = await _tmdbService.FetchMovieVideosAsync(id);
+        return Ok(videos);
+    }
 }

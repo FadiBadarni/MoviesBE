@@ -59,4 +59,9 @@ public class TmdbService
 
         return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages;
     }
+
+    public async Task<List<MovieVideo>> FetchMovieVideosAsync(int movieId)
+    {
+        return await _tmdbApiService.FetchMovieVideosAsync(movieId);
+    }
 }
