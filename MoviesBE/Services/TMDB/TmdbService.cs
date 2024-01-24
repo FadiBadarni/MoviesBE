@@ -1,24 +1,22 @@
 ﻿using MoviesBE.Data;
 using MoviesBE.Repositories;
 
-namespace MoviesBE.Services;
+namespace MoviesBE.Services.TMDB;
 
 public class TmdbService
 {
     private readonly IMovieRepository _movieRepository;
-    private readonly Neo4JService _neo4JService;
     private readonly TmdbApiService _tmdbApiService;
 
-    public TmdbService(TmdbApiService tmdbApiService, Neo4JService neo4JService, IMovieRepository movieRepository)
+    public TmdbService(TmdbApiService tmdbApiService, IMovieRepository movieRepository)
     {
         _tmdbApiService = tmdbApiService;
-        _neo4JService = neo4JService ?? throw new ArgumentNullException(nameof(neo4JService));
         _movieRepository = movieRepository;
     }
 
     public async Task<Movie> GetMovieAsync(int movieId)
     {
-        var movieInDb = await _neo4JService.GetMovieByIdAsync(movieId);
+        var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId);
         if (movieInDb != null)
         {
             return movieInDb;
@@ -39,7 +37,7 @@ public class TmdbService
     {
         var popularMovies = await _tmdbApiService.GetPopularMoviesAsync();
 
-        foreach (var movie in popularMovies) await _neo4JService.SaveMovieAsync(movie);
+        foreach (var movie in popularMovies) await _movieRepository.SaveMovieAsync(movie);
 
         return popularMovies;
     }

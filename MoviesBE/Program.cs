@@ -1,6 +1,8 @@
 using MoviesBE.Middleware;
 using MoviesBE.Repositories;
 using MoviesBE.Services;
+using MoviesBE.Services.Database;
+using MoviesBE.Services.TMDB;
 using Neo4j.Driver;
 
 var builder = WebApplication.CreateBuilder(args);

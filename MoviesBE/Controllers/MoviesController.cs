@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MoviesBE.Data;
-using MoviesBE.Services;
+using MoviesBE.Services.Database;
+using MoviesBE.Services.TMDB;
 
 namespace MoviesBE.Controllers;
 
