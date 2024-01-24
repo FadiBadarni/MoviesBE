@@ -8,7 +8,8 @@ var neo4JConfig = builder.Configuration.GetSection("Neo4j");
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHttpClient<TmdbService>();
+builder.Services.AddHttpClient<HttpService>();
+builder.Services.AddScoped<TmdbService>();
 builder.Services.AddSingleton<Neo4JService>();
 builder.Services.AddSingleton(GraphDatabase.Driver(neo4JConfig["Uri"],
     AuthTokens.Basic(neo4JConfig["Username"], neo4JConfig["Password"])));
