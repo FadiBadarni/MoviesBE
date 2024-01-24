@@ -16,7 +16,7 @@ public static class MovieNodeConverter
                 : string.Empty,
             Overview =
                 node.Properties.ContainsKey("overview") ? node.Properties["overview"].As<string>() : string.Empty,
-            Adult = node.Properties.ContainsKey("adult") ? node.Properties["adult"].As<bool>() : false,
+            Adult = node.Properties.GetValueOrDefault("adult", false).As<bool>(),
             BackdropPath = node.Properties.ContainsKey("backdropPath")
                 ? node.Properties["backdropPath"].As<string>()
                 : string.Empty,
@@ -38,11 +38,10 @@ public static class MovieNodeConverter
             Runtime = node.Properties.ContainsKey("runtime") ? node.Properties["runtime"].As<int>() : 0,
             Status = node.Properties.ContainsKey("status") ? node.Properties["status"].As<string>() : string.Empty,
             Tagline = node.Properties.ContainsKey("tagline") ? node.Properties["tagline"].As<string>() : string.Empty,
-            Video = node.Properties.ContainsKey("video") ? node.Properties["video"].As<bool>() : false,
+            Video = node.Properties.GetValueOrDefault("video", false).As<bool>(),
             VoteAverage =
                 node.Properties.ContainsKey("voteAverage") ? node.Properties["voteAverage"].As<double>() : 0.0,
             VoteCount = node.Properties.ContainsKey("voteCount") ? node.Properties["voteCount"].As<int>() : 0
-            // Handle complex properties like Genres, ProductionCompanies, etc. here
         };
     }
 }

@@ -62,8 +62,10 @@ public class MovieRepository : IMovieRepository
                 OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
                 OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
                 OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
+                OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
                 RETURN m, COLLECT(DISTINCT g) as genres, COLLECT(DISTINCT c) as companies,
-                       COLLECT(DISTINCT pc) as countries, COLLECT(DISTINCT sl) as languages",
+                           COLLECT(DISTINCT pc) as countries, COLLECT(DISTINCT sl) as languages,
+                           COLLECT(DISTINCT b) as backdrops",
                 new { id = movieId });
 
             if (await cursor.FetchAsync())
@@ -77,12 +79,15 @@ public class MovieRepository : IMovieRepository
                     .Select(CountryNodeConverter.ConvertNodeToCountry).ToList();
                 var languages = cursor.Current["languages"].As<List<INode>>()
                     .Select(LanguageNodeConverter.ConvertNodeToLanguage).ToList();
+                var backdrops = cursor.Current["backdrops"].As<List<INode>>()
+                    .Select(BackdropNodeConverter.ConvertNodeToBackdrop).ToList();
 
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
                 movie.Genres = genres;
                 movie.ProductionCompanies = companies;
                 movie.ProductionCountries = countries;
                 movie.SpokenLanguages = languages;
+                movie.Backdrops = backdrops;
 
                 return movie;
             }
@@ -154,7 +159,23 @@ public class MovieRepository : IMovieRepository
           ON MATCH SET
             m.title = $title,
             m.releaseDate = $releaseDate,
-            m.overview = $overview",
+            m.overview = $overview,
+            m.adult = $adult,
+            m.backdropPath = $backdropPath,
+            m.budget = $budget,
+            m.homepage = $homepage,
+            m.imdbId = $imdbId,
+            m.originalLanguage = $originalLanguage,
+            m.originalTitle = $originalTitle,
+            m.popularity = $popularity,
+            m.posterPath = $posterPath,
+            m.revenue = $revenue,
+            m.runtime = $runtime,
+            m.status = $status,
+            m.tagline = $tagline,
+            m.video = $video,
+            m.voteAverage = $voteAverage,
+            m.voteCount = $voteCount",
             new
             {
                 id = movie.Id,
@@ -180,6 +201,7 @@ public class MovieRepository : IMovieRepository
             });
     }
 
+
     private static async Task SaveGenresAsync(Movie movie, IAsyncQueryRunner tx)
     {
         if (movie.Genres == null)
@@ -187,15 +209,24 @@ public class MovieRepository : IMovieRepository
             return;
         }
 
+        // Remove existing genre relationships from this movie.
+        await tx.RunAsync(
+            @"MATCH (m:Movie {id: $movieId})-[r:HAS_GENRE]->(g:Genre)
+          DELETE r",
+            new { movieId = movie.Id });
+
+        // Merge each genre and create a new relationship with the movie.
         foreach (var genre in movie.Genres)
             await tx.RunAsync(
                 @"MERGE (g:Genre {id: $id})
               ON CREATE SET g.name = $name
+              ON MATCH SET g.name = $name
               WITH g
               MATCH (m:Movie {id: $movieId})
               MERGE (m)-[:HAS_GENRE]->(g)",
                 new { id = genre.Id, name = genre.Name, movieId = movie.Id });
     }
+
 
     private static async Task SaveProductionCompaniesAsync(Movie movie, IAsyncQueryRunner tx)
     {
@@ -204,10 +235,18 @@ public class MovieRepository : IMovieRepository
             return;
         }
 
+        // First, detach all existing production company relationships from this movie.
+        await tx.RunAsync(
+            @"MATCH (m:Movie {id: $movieId})-[r:PRODUCED_BY]->(c:Company)
+          DELETE r",
+            new { movieId = movie.Id });
+
+        // Then, merge each production company and create a relationship with the movie.
         foreach (var company in movie.ProductionCompanies)
             await tx.RunAsync(
                 @"MERGE (c:Company {id: $id})
               ON CREATE SET c.name = $name, c.logoPath = $logoPath, c.originCountry = $originCountry
+              ON MATCH SET c.name = $name, c.logoPath = $logoPath, c.originCountry = $originCountry
               WITH c
               MATCH (m:Movie {id: $movieId})
               MERGE (m)-[:PRODUCED_BY]->(c)",
@@ -218,6 +257,7 @@ public class MovieRepository : IMovieRepository
                 });
     }
 
+
     private static async Task SaveProductionCountriesAsync(Movie movie, IAsyncQueryRunner tx)
     {
         if (movie.ProductionCountries == null)
@@ -225,10 +265,18 @@ public class MovieRepository : IMovieRepository
             return;
         }
 
+        // First, detach all existing production country relationships from this movie.
+        await tx.RunAsync(
+            @"MATCH (m:Movie {id: $movieId})-[r:PRODUCED_IN]->(c:Country)
+          DELETE r",
+            new { movieId = movie.Id });
+
+        // Then, merge each production country and create a relationship with the movie.
         foreach (var country in movie.ProductionCountries)
             await tx.RunAsync(
                 @"MERGE (c:Country {iso31661: $iso31661})
               ON CREATE SET c.name = $name
+              ON MATCH SET c.name = $name
               WITH c
               MATCH (m:Movie {id: $movieId})
               MERGE (m)-[:PRODUCED_IN]->(c)",
@@ -243,19 +291,30 @@ public class MovieRepository : IMovieRepository
             return;
         }
 
+        // First, detach all existing spoken language relationships from this movie.
+        await tx.RunAsync(
+            @"MATCH (m:Movie {id: $movieId})-[r:HAS_LANGUAGE]->(l:Language)
+          DELETE r",
+            new { movieId = movie.Id });
+
+        // Then, merge each spoken language and create a relationship with the movie.
         foreach (var language in movie.SpokenLanguages)
             await tx.RunAsync(
                 @"MERGE (l:Language {iso6391: $iso6391})
               ON CREATE SET l.name = $name, l.englishName = $englishName
+              ON MATCH SET l.name = $name, l.englishName = $englishName
               WITH l
               MATCH (m:Movie {id: $movieId})
               MERGE (m)-[:HAS_LANGUAGE]->(l)",
                 new
                 {
-                    iso6391 = language.Iso6391, name = language.Name, englishName = language.EnglishName,
+                    iso6391 = language.Iso6391,
+                    name = language.Name,
+                    englishName = language.EnglishName,
                     movieId = movie.Id
                 });
     }
+
 
     private static async Task SaveMovieBackdropsAsync(Movie movie, IAsyncQueryRunner tx)
     {
@@ -264,13 +323,21 @@ public class MovieRepository : IMovieRepository
             return;
         }
 
+        // First, detach all existing backdrops from this movie to avoid duplicates.
+        await tx.RunAsync(
+            @"MATCH (m:Movie {id: $movieId})-[r:HAS_BACKDROP]->(b:Backdrop)
+          DELETE r",
+            new { movieId = movie.Id });
+
+        // Then, merge each backdrop and create a relationship with the movie.
         foreach (var backdrop in movie.Backdrops.Where(b => !string.IsNullOrEmpty(b.FilePath)))
             await tx.RunAsync(
                 @"MERGE (b:Backdrop {filePath: $filePath})
-            ON CREATE SET b.voteAverage = $voteAverage
-            WITH b
-            MATCH (m:Movie {id: $movieId})
-            MERGE (m)-[:HAS_BACKDROP]->(b)",
+              ON CREATE SET b.voteAverage = $voteAverage
+              ON MATCH SET b.voteAverage = $voteAverage
+              WITH b
+              MATCH (m:Movie {id: $movieId})
+              MERGE (m)-[:HAS_BACKDROP]->(b)",
                 new
                 {
                     filePath = backdrop.FilePath,
