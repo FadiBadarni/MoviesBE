@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MoviesBE.Data;
+using MoviesBE.Repositories;
 using MoviesBE.Services.Database;
 using MoviesBE.Services.TMDB;
 
@@ -9,13 +10,15 @@ namespace MoviesBE.Controllers;
 [Route("[controller]")]
 public class MoviesController : ControllerBase
 {
+    private readonly IMovieRepository _movieRepository;
     private readonly Neo4JService _neo4JService;
     private readonly TmdbService _tmdbService;
 
-    public MoviesController(TmdbService tmdbService, Neo4JService neo4JService)
+    public MoviesController(TmdbService tmdbService, Neo4JService neo4JService, IMovieRepository movieRepository)
     {
         _tmdbService = tmdbService;
         _neo4JService = neo4JService;
+        _movieRepository = movieRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -35,7 +38,7 @@ public class MoviesController : ControllerBase
     [HttpGet("cached-popular")]
     public async Task<ActionResult<List<PopularMovie>>> GetCachedPopularMovies()
     {
-        var movies = await _neo4JService.GetCachedPopularMoviesAsync();
+        var movies = await _movieRepository.GetCachedPopularMoviesAsync();
         return Ok(movies);
     }
 }
