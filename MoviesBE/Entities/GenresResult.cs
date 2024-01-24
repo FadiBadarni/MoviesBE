@@ -5,5 +5,5 @@ namespace MoviesBE.Data;
 public class GenresResult
 {
     [JsonPropertyName("genres")]
-    public List<Movie.Genre>? Genres { get; init; }
+    public List<Genre>? Genres { get; init; }
 }

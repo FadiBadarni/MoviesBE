@@ -70,46 +70,4 @@ public class Movie
     public int VoteCount { get; init; }
 
     public List<MovieBackdrop>? Backdrops { get; set; }
-
-    public class Genre
-    {
-        public int Id { get; init; }
-        public string? Name { get; init; }
-    }
-
-    public class MovieCollection
-    {
-        public int Id { get; init; }
-        public string? Name { get; init; }
-        [JsonPropertyName("poster_path")]
-        public string? PosterPath { get; init; }
-        [JsonPropertyName("backdrop_path")]
-        public string? BackdropPath { get; init; }
-    }
-
-    public class ProductionCompany
-    {
-        public int Id { get; init; }
-        [JsonPropertyName("logo_path")]
-        public string? LogoPath { get; init; }
-        public string? Name { get; init; }
-        [JsonPropertyName("origin_country")]
-        public string? OriginCountry { get; init; }
-    }
-
-    public class ProductionCountry
-    {
-        [JsonPropertyName("iso_3166_1")]
-        public string? Iso31661 { get; init; }
-        public string? Name { get; init; }
-    }
-
-    public class SpokenLanguage
-    {
-        [JsonPropertyName("english_name")]
-        public string? EnglishName { get; init; }
-        [JsonPropertyName("iso_639_1")]
-        public string? Iso6391 { get; init; }
-        public string? Name { get; init; }
-    }
 }

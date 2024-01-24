@@ -65,7 +65,7 @@ public class TmdbApiService
             {
                 movie.Genres = movie.GenreIds
                     .Select(id => genresLookup.GetValueOrDefault(id))
-                    .OfType<Movie.Genre>()
+                    .OfType<Genre>()
                     .ToList();
             }
 
@@ -75,11 +75,11 @@ public class TmdbApiService
         return moviesWithGenres;
     }
 
-    private async Task<Dictionary<int, Movie.Genre>> GetGenresAsync()
+    private async Task<Dictionary<int, Genre>> GetGenresAsync()
     {
         var requestUri = $"{_baseUrl}genre/movie/list";
         var genresResult = await _httpService.SendAndDeserializeAsync<GenresResult>(requestUri);
 
-        return genresResult?.Genres?.ToDictionary(g => g.Id) ?? new Dictionary<int, Movie.Genre>();
+        return genresResult?.Genres?.ToDictionary(g => g.Id) ?? new Dictionary<int, Genre>();
     }
 }

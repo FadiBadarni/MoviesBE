@@ -1,16 +1,19 @@
 ﻿using MoviesBE.Data;
+using MoviesBE.Repositories;
 
 namespace MoviesBE.Services;
 
 public class TmdbService
 {
+    private readonly IMovieRepository _movieRepository;
     private readonly Neo4JService _neo4JService;
     private readonly TmdbApiService _tmdbApiService;
 
-    public TmdbService(TmdbApiService tmdbApiService, Neo4JService neo4JService)
+    public TmdbService(TmdbApiService tmdbApiService, Neo4JService neo4JService, IMovieRepository movieRepository)
     {
         _tmdbApiService = tmdbApiService;
         _neo4JService = neo4JService ?? throw new ArgumentNullException(nameof(neo4JService));
+        _movieRepository = movieRepository;
     }
 
     public async Task<Movie> GetMovieAsync(int movieId)
@@ -27,7 +30,7 @@ public class TmdbService
             throw new KeyNotFoundException($"Movie with ID {movieId} not found.");
         }
 
-        await _neo4JService.SaveMovieAsync(movie);
+        await _movieRepository.SaveMovieAsync(movie);
         return movie;
     }
 

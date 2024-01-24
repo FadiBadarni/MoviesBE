@@ -339,18 +339,18 @@ public class Neo4JService : IAsyncDisposable
                 });
     }
 
-    private static Movie.Genre ConvertNodeToGenre(IEntity node)
+    private static Genre ConvertNodeToGenre(IEntity node)
     {
-        return new Movie.Genre
+        return new Genre
         {
             Id = node.Properties.ContainsKey("id") ? node.Properties["id"].As<int>() : 0,
             Name = node.Properties.ContainsKey("name") ? node.Properties["name"].As<string>() : string.Empty
         };
     }
 
-    private static Movie.ProductionCompany ConvertNodeToCompany(IEntity node)
+    private static ProductionCompany ConvertNodeToCompany(IEntity node)
     {
-        return new Movie.ProductionCompany
+        return new ProductionCompany
         {
             Id = node.Properties.ContainsKey("id") ? node.Properties["id"].As<int>() : 0,
             Name = node.Properties.ContainsKey("name") ? node.Properties["name"].As<string>() : string.Empty,
@@ -362,9 +362,9 @@ public class Neo4JService : IAsyncDisposable
         };
     }
 
-    private static Movie.ProductionCountry ConvertNodeToCountry(IEntity node)
+    private static ProductionCountry ConvertNodeToCountry(IEntity node)
     {
-        return new Movie.ProductionCountry
+        return new ProductionCountry
         {
             Iso31661 = node.Properties.ContainsKey("iso_3166_1")
                 ? node.Properties["iso_3166_1"].As<string>()
@@ -373,9 +373,9 @@ public class Neo4JService : IAsyncDisposable
         };
     }
 
-    private static Movie.SpokenLanguage ConvertNodeToLanguage(IEntity node)
+    private static SpokenLanguage ConvertNodeToLanguage(IEntity node)
     {
-        return new Movie.SpokenLanguage
+        return new SpokenLanguage
         {
             EnglishName = node.Properties.ContainsKey("englishName")
                 ? node.Properties["englishName"].As<string>()

@@ -1,4 +1,5 @@
 using MoviesBE.Middleware;
+using MoviesBE.Repositories;
 using MoviesBE.Services;
 using Neo4j.Driver;
 
@@ -15,6 +16,7 @@ builder.Services.AddScoped<TmdbApiService>();
 builder.Services.AddSingleton<Neo4JService>();
 builder.Services.AddSingleton(GraphDatabase.Driver(neo4JConfig["Uri"],
     AuthTokens.Basic(neo4JConfig["Username"], neo4JConfig["Password"])));
+builder.Services.AddScoped<IMovieRepository, MovieRepository>();
 
 // Configure logging
 builder.Logging.AddConsole();
