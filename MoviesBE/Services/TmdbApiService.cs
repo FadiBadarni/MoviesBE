@@ -20,8 +20,15 @@ public class TmdbApiService
     {
         var requestUri = $"{_baseUrl}movie/{movieId}";
         var movieResponse = await _httpService.SendAndDeserializeAsync<Movie>(requestUri);
+
+        if (movieResponse == null)
+        {
+            throw new InvalidOperationException($"No movie data returned for movie ID {movieId}.");
+        }
+
         var backdrops = await FetchMovieBackdropsAsync(movieId);
         movieResponse.Backdrops = backdrops.Take(5).ToList();
+
         return movieResponse;
     }
 

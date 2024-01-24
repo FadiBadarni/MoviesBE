@@ -23,7 +23,9 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Something went wrong: {ex}");
+            _logger.LogError(ex, "An error occurred: {ExceptionType} - {Message} - Request: {Method} {Url}",
+                ex.GetType().Name, ex.Message, context.Request.Method, context.Request.Path);
+
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -48,6 +50,22 @@ public class ExceptionMiddleware
                 {
                     StatusCode = context.Response.StatusCode,
                     Message = databaseAccessException.Message
+                }.ToString());
+
+            case ExternalApiException externalApiException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
+                return context.Response.WriteAsync(new ErrorDetails
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = externalApiException.Message
+                }.ToString());
+
+            case DataFormatException dataFormatException:
+                context.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
+                return context.Response.WriteAsync(new ErrorDetails
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = dataFormatException.Message
                 }.ToString());
 
             // TODO: handle other exception types ...
