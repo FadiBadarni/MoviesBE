@@ -27,7 +27,7 @@ public class MoviesController : ControllerBase
     [HttpGet("popular")]
     public async Task<ActionResult<List<Movie>>> GetPopularMovies()
     {
-        var movies = await _tmdbService.GetPopularMoviesAsync();
+        var movies = await _tmdbService.GetPopularMoviesAndSaveAsync();
         return Ok(movies);
     }
 
