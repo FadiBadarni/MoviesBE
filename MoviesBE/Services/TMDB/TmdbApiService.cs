@@ -40,12 +40,18 @@ public class TmdbApiService
             return new List<MovieBackdrop>();
         }
 
-        return images.Backdrops.Select(backdrop => new MovieBackdrop
-        {
-            FilePath = backdrop.FilePath,
-            VoteAverage = backdrop.VoteAverage
-        }).ToList();
+        // Sort backdrops by VoteAverage in descending order and take top 5
+        return images.Backdrops
+            .OrderByDescending(backdrop => backdrop.VoteAverage)
+            .Take(5)
+            .Select(backdrop => new MovieBackdrop
+            {
+                FilePath = backdrop.FilePath,
+                VoteAverage = backdrop.VoteAverage
+            })
+            .ToList();
     }
+
 
     public async Task<List<Movie>> GetPopularMoviesAsync()
     {
