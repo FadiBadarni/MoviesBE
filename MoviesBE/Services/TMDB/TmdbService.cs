@@ -17,7 +17,8 @@ public class TmdbService
     public async Task<Movie> GetMovieAsync(int movieId)
     {
         var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId);
-        if (movieInDb != null)
+
+        if (movieInDb != null && IsMovieDataComplete(movieInDb))
         {
             return movieInDb;
         }
@@ -40,5 +41,14 @@ public class TmdbService
         foreach (var movie in popularMovies) await _movieRepository.SaveMovieAsync(movie);
 
         return popularMovies;
+    }
+
+    private static bool IsMovieDataComplete(Movie movie)
+    {
+        return movie.Budget != 0 &&
+               movie.Revenue != 0 &&
+               movie.Runtime != 0 &&
+               !string.IsNullOrEmpty(movie.Status) &&
+               movie.Backdrops is { Count: > 0 };
     }
 }
