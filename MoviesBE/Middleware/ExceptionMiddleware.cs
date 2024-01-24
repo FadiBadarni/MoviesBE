@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using MoviesBE.DTOs;
 using MoviesBE.Exceptions;
+using Neo4j.Driver;
 
 namespace MoviesBE.Middleware;
 
@@ -23,8 +24,10 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred: {ExceptionType} - {Message} - Request: {Method} {Url}",
+            _logger.LogError("An error occurred: {ExceptionType} - {Message} - Request: {Method} {Url}",
                 ex.GetType().Name, ex.Message, context.Request.Method, context.Request.Path);
+
+            _logger.LogDebug(ex, "Full exception details");
 
             await HandleExceptionAsync(context, ex);
         }
@@ -67,6 +70,23 @@ public class ExceptionMiddleware
                     StatusCode = context.Response.StatusCode,
                     Message = dataFormatException.Message
                 }.ToString());
+
+            case ExternalServiceException externalServiceException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadGateway;
+                return context.Response.WriteAsync(new ErrorDetails
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = externalServiceException.Message
+                }.ToString());
+
+            case Neo4jException:
+                context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                return context.Response.WriteAsync(new ErrorDetails
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = "A database error occurred."
+                }.ToString());
+
 
             // TODO: handle other exception types ...
 

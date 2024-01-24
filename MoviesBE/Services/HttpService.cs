@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
+using MoviesBE.Exceptions;
 
 namespace MoviesBE.Services;
 
@@ -22,7 +23,7 @@ public class HttpService
                               throw new InvalidOperationException("API Read Access Token is not configured.");
     }
 
-    public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
+    private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
     {
         try
         {
@@ -32,12 +33,12 @@ public class HttpService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP request failed");
-            throw;
+            _logger.LogError("HTTP request to {Url} failed: {Message}", request.RequestUri, ex.Message);
+            throw new ExternalServiceException("An error occurred while making an HTTP request.", ex);
         }
     }
 
-    public HttpRequestMessage CreateRequest(HttpMethod method, string requestUri)
+    private HttpRequestMessage CreateRequest(HttpMethod method, string requestUri)
     {
         var request = new HttpRequestMessage(method, requestUri)
         {

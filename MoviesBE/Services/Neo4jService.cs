@@ -1,5 +1,4 @@
 ﻿using MoviesBE.Data;
-using MoviesBE.Exceptions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Services;
@@ -22,45 +21,38 @@ public class Neo4JService : IAsyncDisposable
     public async Task<Movie?> GetMovieByIdAsync(int movieId)
     {
         await using var session = _neo4JDriver.AsyncSession();
-        try
+        return await session.ExecuteReadAsync(async tx =>
         {
-            return await session.ExecuteReadAsync(async tx =>
-            {
-                var cursor = await tx.RunAsync(
-                    @"MATCH (m:Movie {id: $id})
+            var cursor = await tx.RunAsync(
+                @"MATCH (m:Movie {id: $id})
                 OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
                 OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
                 OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
                 OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
                 RETURN m, COLLECT(DISTINCT g) as genres, COLLECT(DISTINCT c) as companies,
                        COLLECT(DISTINCT pc) as countries, COLLECT(DISTINCT sl) as languages",
-                    new { id = movieId });
+                new { id = movieId });
 
-                if (await cursor.FetchAsync())
-                {
-                    var movieNode = cursor.Current["m"].As<INode>();
-                    var genres = cursor.Current["genres"].As<List<INode>>().Select(ConvertNodeToGenre).ToList();
-                    var companies = cursor.Current["companies"].As<List<INode>>().Select(ConvertNodeToCompany).ToList();
-                    var countries = cursor.Current["countries"].As<List<INode>>().Select(ConvertNodeToCountry).ToList();
-                    var languages = cursor.Current["languages"].As<List<INode>>().Select(ConvertNodeToLanguage)
-                        .ToList();
+            if (await cursor.FetchAsync())
+            {
+                var movieNode = cursor.Current["m"].As<INode>();
+                var genres = cursor.Current["genres"].As<List<INode>>().Select(ConvertNodeToGenre).ToList();
+                var companies = cursor.Current["companies"].As<List<INode>>().Select(ConvertNodeToCompany).ToList();
+                var countries = cursor.Current["countries"].As<List<INode>>().Select(ConvertNodeToCountry).ToList();
+                var languages = cursor.Current["languages"].As<List<INode>>().Select(ConvertNodeToLanguage)
+                    .ToList();
 
-                    var movie = ConvertNodeToMovie(movieNode);
-                    movie.Genres = genres;
-                    movie.ProductionCompanies = companies;
-                    movie.ProductionCountries = countries;
-                    movie.SpokenLanguages = languages;
+                var movie = ConvertNodeToMovie(movieNode);
+                movie.Genres = genres;
+                movie.ProductionCompanies = companies;
+                movie.ProductionCountries = countries;
+                movie.SpokenLanguages = languages;
 
-                    return movie;
-                }
+                return movie;
+            }
 
-                return null;
-            });
-        }
-        catch (Neo4jException ex)
-        {
-            throw new DatabaseAccessException("An error occurred accessing the database.", ex);
-        }
+            return null;
+        });
     }
 
 

@@ -34,20 +34,12 @@ public class TmdbService
     }
 
 
-    public async Task<ServiceResult<List<Movie>>> GetPopularMoviesAndSaveAsync()
+    public async Task<List<Movie>> GetPopularMoviesAndSaveAsync()
     {
-        try
-        {
-            var popularMovies = await _tmdbApiService.GetPopularMoviesAsync();
+        var popularMovies = await _tmdbApiService.GetPopularMoviesAsync();
 
-            foreach (var movie in popularMovies) await _neo4JService.SaveMovieAsync(movie);
+        foreach (var movie in popularMovies) await _neo4JService.SaveMovieAsync(movie);
 
-            return new ServiceResult<List<Movie>>(popularMovies, true, null);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching popular movies");
-            return new ServiceResult<List<Movie>>(null, false, ex.Message);
-        }
+        return popularMovies;
     }
 }
