@@ -1,4 +1,5 @@
-﻿using MoviesBE.Data;
+﻿using MoviesBE.DTOs;
+using MoviesBE.Entities;
 
 namespace MoviesBE.Repositories;
 

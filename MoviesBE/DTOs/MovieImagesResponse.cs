@@ -1,4 +1,4 @@
-﻿using MoviesBE.Data;
+﻿using MoviesBE.Entities;
 
 namespace MoviesBE.DTOs;
 

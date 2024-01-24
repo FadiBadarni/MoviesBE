@@ -1,4 +1,4 @@
-﻿using MoviesBE.Data;
+﻿using MoviesBE.Entities;
 using Neo4j.Driver;
 
 namespace MoviesBE.Utilities.Conversions;

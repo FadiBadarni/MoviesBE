@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
+using MoviesBE.Entities;
 
-namespace MoviesBE.Data;
+namespace MoviesBE.DTOs;
 
 public class MovieListResult
 {

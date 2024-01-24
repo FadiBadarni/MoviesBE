@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MoviesBE.Data;
+using MoviesBE.DTOs;
+using MoviesBE.Entities;
 using MoviesBE.Repositories;
 using MoviesBE.Services.TMDB;
 

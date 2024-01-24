@@ -1,4 +1,4 @@
-﻿namespace MoviesBE.Data;
+﻿namespace MoviesBE.Entities;
 
 public class Genre
 {

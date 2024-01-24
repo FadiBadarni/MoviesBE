@@ -1,4 +1,4 @@
-﻿using MoviesBE.Data;
+﻿using MoviesBE.Entities;
 using MoviesBE.Repositories;
 
 namespace MoviesBE.Services.TMDB;

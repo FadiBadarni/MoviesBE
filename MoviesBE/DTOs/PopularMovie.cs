@@ -1,4 +1,4 @@
-﻿namespace MoviesBE.Data;
+﻿namespace MoviesBE.DTOs;
 
 public class PopularMovie
 {
