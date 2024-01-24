@@ -1,5 +1,6 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
+using MoviesBE.Services.TMDB;
 
 namespace MoviesBE.Services;
 
@@ -7,11 +8,14 @@ public class TmdbApiService
 {
     private readonly string _baseUrl;
     private readonly HttpService _httpService;
+    private readonly MovieBackdropService _movieBackdropService;
 
-    public TmdbApiService(HttpService httpService, IConfiguration configuration)
+    public TmdbApiService(HttpService httpService, IConfiguration configuration,
+        MovieBackdropService movieBackdropService)
     {
         _httpService = httpService;
         _baseUrl = configuration["TMDB:BaseUrl"] ?? throw new InvalidOperationException("Base URL is not configured.");
+        _movieBackdropService = movieBackdropService;
     }
 
     public async Task<Movie?> FetchMovieFromTmdbAsync(int movieId)
@@ -24,32 +28,10 @@ public class TmdbApiService
             throw new InvalidOperationException($"No movie data returned for movie ID {movieId}.");
         }
 
-        var backdrops = await FetchMovieBackdropsAsync(movieId);
-        movieResponse.Backdrops = backdrops.Take(5).ToList();
+        var backdrops = await _movieBackdropService.FetchMovieBackdropsAsync(movieId);
+        movieResponse.Backdrops = backdrops;
 
         return movieResponse;
-    }
-
-    private async Task<List<MovieBackdrop>> FetchMovieBackdropsAsync(int movieId)
-    {
-        var backdropsUri = $"{_baseUrl}movie/{movieId}/images";
-
-        var images = await _httpService.SendAndDeserializeAsync<MovieImagesResponse>(backdropsUri);
-        if (images?.Backdrops == null)
-        {
-            return new List<MovieBackdrop>();
-        }
-
-        // Sort backdrops by VoteAverage in descending order and take top 5
-        return images.Backdrops
-            .OrderByDescending(backdrop => backdrop.VoteAverage)
-            .Take(5)
-            .Select(backdrop => new MovieBackdrop
-            {
-                FilePath = backdrop.FilePath,
-                VoteAverage = backdrop.VoteAverage
-            })
-            .ToList();
     }
 
 

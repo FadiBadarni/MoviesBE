@@ -333,8 +333,16 @@ public class MovieRepository : IMovieRepository
         foreach (var backdrop in movie.Backdrops.Where(b => !string.IsNullOrEmpty(b.FilePath)))
             await tx.RunAsync(
                 @"MERGE (b:Backdrop {filePath: $filePath})
-              ON CREATE SET b.voteAverage = $voteAverage
-              ON MATCH SET b.voteAverage = $voteAverage
+              ON CREATE SET 
+                b.voteAverage = $voteAverage,
+                b.aspectRatio = $aspectRatio,
+                b.width = $width,
+                b.height = $height
+              ON MATCH SET 
+                b.voteAverage = $voteAverage,
+                b.aspectRatio = $aspectRatio,
+                b.width = $width,
+                b.height = $height
               WITH b
               MATCH (m:Movie {id: $movieId})
               MERGE (m)-[:HAS_BACKDROP]->(b)",
@@ -342,6 +350,9 @@ public class MovieRepository : IMovieRepository
                 {
                     filePath = backdrop.FilePath,
                     voteAverage = backdrop.VoteAverage,
+                    aspectRatio = backdrop.AspectRatio,
+                    width = backdrop.Width,
+                    height = backdrop.Height,
                     movieId = movie.Id
                 });
     }
