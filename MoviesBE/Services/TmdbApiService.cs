@@ -7,13 +7,11 @@ public class TmdbApiService
 {
     private readonly string _baseUrl;
     private readonly HttpService _httpService;
-    private readonly ILogger<TmdbApiService> _logger;
 
-    public TmdbApiService(HttpService httpService, IConfiguration configuration, ILogger<TmdbApiService> logger)
+    public TmdbApiService(HttpService httpService, IConfiguration configuration)
     {
         _httpService = httpService;
         _baseUrl = configuration["TMDB:BaseUrl"] ?? throw new InvalidOperationException("Base URL is not configured.");
-        _logger = logger;
     }
 
     public async Task<Movie?> FetchMovieFromTmdbAsync(int movieId)
@@ -36,25 +34,17 @@ public class TmdbApiService
     {
         var backdropsUri = $"{_baseUrl}movie/{movieId}/images";
 
-        try
+        var images = await _httpService.SendAndDeserializeAsync<MovieImagesResponse>(backdropsUri);
+        if (images?.Backdrops == null)
         {
-            var images = await _httpService.SendAndDeserializeAsync<MovieImagesResponse>(backdropsUri);
-            if (images?.Backdrops == null)
-            {
-                return new List<MovieBackdrop>();
-            }
-
-            return images.Backdrops.Select(backdrop => new MovieBackdrop
-            {
-                FilePath = backdrop.FilePath,
-                VoteAverage = backdrop.VoteAverage
-            }).ToList();
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "Error fetching backdrop data for movie ID {MovieId}", movieId);
             return new List<MovieBackdrop>();
         }
+
+        return images.Backdrops.Select(backdrop => new MovieBackdrop
+        {
+            FilePath = backdrop.FilePath,
+            VoteAverage = backdrop.VoteAverage
+        }).ToList();
     }
 
     public async Task<List<Movie>> GetPopularMoviesAsync()
@@ -89,6 +79,7 @@ public class TmdbApiService
     {
         var requestUri = $"{_baseUrl}genre/movie/list";
         var genresResult = await _httpService.SendAndDeserializeAsync<GenresResult>(requestUri);
-        return genresResult?.Genres.ToDictionary(g => g.Id) ?? new Dictionary<int, Movie.Genre>();
+
+        return genresResult?.Genres?.ToDictionary(g => g.Id) ?? new Dictionary<int, Movie.Genre>();
     }
 }

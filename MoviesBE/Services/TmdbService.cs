@@ -4,14 +4,12 @@ namespace MoviesBE.Services;
 
 public class TmdbService
 {
-    private readonly ILogger<TmdbService> _logger;
     private readonly Neo4JService _neo4JService;
     private readonly TmdbApiService _tmdbApiService;
 
-    public TmdbService(TmdbApiService tmdbApiService, Neo4JService neo4JService, ILogger<TmdbService> logger)
+    public TmdbService(TmdbApiService tmdbApiService, Neo4JService neo4JService)
     {
         _tmdbApiService = tmdbApiService;
-        _logger = logger;
         _neo4JService = neo4JService ?? throw new ArgumentNullException(nameof(neo4JService));
     }
 

@@ -51,7 +51,7 @@ public class HttpService
         return request;
     }
 
-    public async Task<T> SendAndDeserializeAsync<T>(string requestUri)
+    public async Task<T?> SendAndDeserializeAsync<T>(string requestUri)
     {
         var request = CreateRequest(HttpMethod.Get, requestUri);
         using var response = await SendAsync(request);
