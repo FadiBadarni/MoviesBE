@@ -79,8 +79,14 @@ public class MovieRepository : IMovieRepository
                     .Select(CountryNodeConverter.ConvertNodeToCountry).ToList();
                 var languages = cursor.Current["languages"].As<List<INode>>()
                     .Select(LanguageNodeConverter.ConvertNodeToLanguage).ToList();
+
+                const double bannerAspectRatio = 1.78;
                 var backdrops = cursor.Current["backdrops"].As<List<INode>>()
-                    .Select(BackdropNodeConverter.ConvertNodeToBackdrop).ToList();
+                    .Select(BackdropNodeConverter.ConvertNodeToBackdrop)
+                    .OrderByDescending(b =>
+                        Math.Abs(b.AspectRatio - bannerAspectRatio)) // Prioritize banner-like aspect ratio
+                    .ThenByDescending(b => b.Width * b.Height) // Then by size
+                    .ToList();
 
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
                 movie.Genres = genres;

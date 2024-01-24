@@ -45,10 +45,18 @@ public class TmdbService
 
     private static bool IsMovieDataComplete(Movie movie)
     {
-        return movie.Budget != 0 &&
-               movie.Revenue != 0 &&
-               movie.Runtime != 0 &&
-               !string.IsNullOrEmpty(movie.Status) &&
-               movie.Backdrops is { Count: > 0 };
+        var hasEssentialInfo = !string.IsNullOrEmpty(movie.Title) &&
+                               !string.IsNullOrEmpty(movie.Overview) &&
+                               !string.IsNullOrEmpty(movie.ReleaseDate) &&
+                               movie.Genres != null && movie.Genres.Count > 0 &&
+                               !string.IsNullOrEmpty(movie.PosterPath);
+
+        var hasAdditionalInfo = movie.Runtime > 0 &&
+                                !string.IsNullOrEmpty(movie.Status) &&
+                                movie.VoteAverage > 0;
+
+        var hasBackdropImages = movie.Backdrops != null && movie.Backdrops.Count > 0;
+
+        return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages;
     }
 }

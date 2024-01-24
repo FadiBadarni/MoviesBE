@@ -17,13 +17,12 @@ public class MovieBackdropService
     public async Task<List<MovieBackdrop>> FetchMovieBackdropsAsync(int movieId)
     {
         var images = await FetchBackdropsFromApiAsync(movieId);
-        if (images.Backdrops.Count == 0)
+        if (!images.Backdrops.Any())
         {
             return new List<MovieBackdrop>();
         }
 
-        var groupedBackdrops = GroupBackdrops(images.Backdrops);
-        return SelectTopImagesForCategories(groupedBackdrops);
+        return SelectTopBackdrops(images.Backdrops, 10); // Limit total backdrops to 10
     }
 
     private async Task<MovieImagesResponse> FetchBackdropsFromApiAsync(int movieId)
@@ -33,42 +32,28 @@ public class MovieBackdropService
         return response ?? new MovieImagesResponse { Backdrops = new List<MovieBackdrop>() };
     }
 
-    private IEnumerable<GroupedBackdrop> GroupBackdrops(IEnumerable<MovieBackdrop> backdrops)
-    {
-        return backdrops.GroupBy(backdrop => new { backdrop.AspectRatio, backdrop.Width, backdrop.Height })
-            .Select(group => new GroupedBackdrop
-            {
-                AspectRatio = group.Key.AspectRatio,
-                Resolution = group.Key.Width * group.Key.Height,
-                Backdrops = group.OrderByDescending(b => b.VoteAverage).ToList()
-            });
-    }
 
-    private List<MovieBackdrop> SelectTopImagesForCategories(IEnumerable<GroupedBackdrop> groupedBackdrops)
+    private List<MovieBackdrop> SelectTopBackdrops(IEnumerable<MovieBackdrop> backdrops, int maxTotal)
     {
-        // Materialize the enumerable into a list
-        var groupedBackdropsList = groupedBackdrops.ToList();
+        const double aspectRatioTolerance = 0.2; // Increased tolerance
+        var groupedBackdrops = backdrops
+            .GroupBy(b => Math.Round(b.AspectRatio / aspectRatioTolerance) * aspectRatioTolerance)
+            .OrderByDescending(group => group.Average(b => b.VoteAverage))
+            .ToList();
 
         var selectedBackdrops = new List<MovieBackdrop>();
-        selectedBackdrops.AddRange(SelectTopImagesForCategory(groupedBackdropsList, 1.78)); // Banner
-        selectedBackdrops.AddRange(SelectTopImagesForCategory(groupedBackdropsList, 1.0)); // Background
-        // Add more categories if needed
-        return selectedBackdrops;
-    }
+        foreach (var group in groupedBackdrops)
+        {
+            var topBackdropsInGroup =
+                group.OrderByDescending(b => b.VoteAverage).Take(maxTotal - selectedBackdrops.Count);
+            selectedBackdrops.AddRange(topBackdropsInGroup);
 
-
-    private IEnumerable<MovieBackdrop> SelectTopImagesForCategory(IEnumerable<GroupedBackdrop> groupedBackdrops,
-        double desiredAspectRatio)
-    {
-        return groupedBackdrops
-            .Where(group => Math.Abs(group.AspectRatio - desiredAspectRatio) < 0.1)
-            .OrderByDescending(group => group.Resolution)
-            .SelectMany(group => group.Backdrops)
-            .Take(1) // Or more if needed
-            .Select(backdrop => new MovieBackdrop
+            if (selectedBackdrops.Count >= maxTotal)
             {
-                FilePath = backdrop.FilePath,
-                VoteAverage = backdrop.VoteAverage
-            });
+                break;
+            }
+        }
+
+        return selectedBackdrops;
     }
 }
