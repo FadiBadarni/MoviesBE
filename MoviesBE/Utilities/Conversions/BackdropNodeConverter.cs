@@ -9,11 +9,11 @@ public static class BackdropNodeConverter
     {
         return new MovieBackdrop
         {
-            FilePath = node.Properties.ContainsKey("file_path")
-                ? node.Properties["file_path"].As<string>()
+            FilePath = node.Properties.ContainsKey("filePath")
+                ? node.Properties["filePath"].As<string>()
                 : string.Empty,
-            VoteAverage = node.Properties.ContainsKey("vote_average")
-                ? node.Properties["vote_average"].As<double>()
+            VoteAverage = node.Properties.ContainsKey("voteAverage")
+                ? node.Properties["voteAverage"].As<double>()
                 : 0.0
         };
     }
