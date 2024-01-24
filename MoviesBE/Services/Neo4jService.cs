@@ -1,4 +1,5 @@
 ﻿using MoviesBE.Data;
+using MoviesBE.Exceptions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Services;
@@ -56,10 +57,9 @@ public class Neo4JService : IAsyncDisposable
                 return null;
             });
         }
-        catch (Exception ex)
+        catch (Neo4jException ex)
         {
-            // Log the exception
-            return null;
+            throw new DatabaseAccessException("An error occurred accessing the database.", ex);
         }
     }
 

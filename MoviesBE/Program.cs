@@ -1,3 +1,4 @@
+using MoviesBE.Middleware;
 using MoviesBE.Services;
 using Neo4j.Driver;
 
@@ -11,7 +12,6 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient<HttpService>();
 builder.Services.AddScoped<TmdbService>();
 builder.Services.AddScoped<TmdbApiService>();
-builder.Services.AddScoped<Neo4jMovieService>();
 builder.Services.AddSingleton<Neo4JService>();
 builder.Services.AddSingleton(GraphDatabase.Driver(neo4JConfig["Uri"],
     AuthTokens.Basic(neo4JConfig["Username"], neo4JConfig["Password"])));
@@ -38,14 +38,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseExceptionHandler("/error");
-
 app.UseCors("AllowSpecificOrigin");
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.MapControllers();
 

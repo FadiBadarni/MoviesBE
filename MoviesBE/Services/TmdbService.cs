@@ -15,31 +15,24 @@ public class TmdbService
         _neo4JService = neo4JService ?? throw new ArgumentNullException(nameof(neo4JService));
     }
 
-    public async Task<ServiceResult<Movie>> GetMovieAsync(int movieId)
+    public async Task<Movie> GetMovieAsync(int movieId)
     {
         var movieInDb = await _neo4JService.GetMovieByIdAsync(movieId);
         if (movieInDb != null)
         {
-            return new ServiceResult<Movie>(movieInDb, true, null);
+            return movieInDb;
         }
 
-        try
+        var movie = await _tmdbApiService.FetchMovieFromTmdbAsync(movieId);
+        if (movie == null)
         {
-            var movie = await _tmdbApiService.FetchMovieFromTmdbAsync(movieId);
-            if (movie == null)
-            {
-                return new ServiceResult<Movie>(null, false, "Movie not found");
-            }
+            throw new KeyNotFoundException($"Movie with ID {movieId} not found.");
+        }
 
-            await _neo4JService.SaveMovieAsync(movie);
-            return new ServiceResult<Movie>(movie, true, null);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching movie data for movie ID {MovieId}", movieId);
-            return new ServiceResult<Movie>(null, false, ex.Message);
-        }
+        await _neo4JService.SaveMovieAsync(movie);
+        return movie;
     }
+
 
     public async Task<ServiceResult<List<Movie>>> GetPopularMoviesAndSaveAsync()
     {
