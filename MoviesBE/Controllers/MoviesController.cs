@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MoviesBE.Data;
 using MoviesBE.Repositories;
-using MoviesBE.Services.Database;
 using MoviesBE.Services.TMDB;
 
 namespace MoviesBE.Controllers;
@@ -11,13 +10,11 @@ namespace MoviesBE.Controllers;
 public class MoviesController : ControllerBase
 {
     private readonly IMovieRepository _movieRepository;
-    private readonly Neo4JService _neo4JService;
     private readonly TmdbService _tmdbService;
 
-    public MoviesController(TmdbService tmdbService, Neo4JService neo4JService, IMovieRepository movieRepository)
+    public MoviesController(TmdbService tmdbService, IMovieRepository movieRepository)
     {
         _tmdbService = tmdbService;
-        _neo4JService = neo4JService;
         _movieRepository = movieRepository;
     }
 
