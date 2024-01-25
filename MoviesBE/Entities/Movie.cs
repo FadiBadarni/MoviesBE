@@ -70,4 +70,6 @@ public class Movie
     public int VoteCount { get; init; }
 
     public List<MovieBackdrop>? Backdrops { get; set; }
+
+    public List<MovieVideo>? Videos { get; set; }
 }

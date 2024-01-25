@@ -43,6 +43,8 @@ public class MovieRepository : IMovieRepository
                 }
 
                 await SaveMovieBackdropsAsync(movie, tx);
+
+                await SaveMovieVideosAsync(movie, tx);
             });
         }
         finally
@@ -108,31 +110,24 @@ public class MovieRepository : IMovieRepository
         var movies = new List<PopularMovie>();
         await using var session = _neo4JDriver.AsyncSession();
         const double popularityThreshold = 50;
-        try
+
+        var result = await session.ExecuteReadAsync(async tx =>
         {
-            var result = await session.ExecuteReadAsync(async tx =>
-            {
-                var cursor = await tx.RunAsync(
-                    @"MATCH (m:Movie)
+            var cursor = await tx.RunAsync(
+                @"MATCH (m:Movie)
                           WHERE m.popularity >= $popularityThreshold
                           RETURN m",
-                    new { popularityThreshold });
+                new { popularityThreshold });
 
-                var records = await cursor.ToListAsync();
-                return records;
-            });
+            var records = await cursor.ToListAsync();
+            return records;
+        });
 
-            foreach (var record in result)
-            {
-                var movieNode = record["m"].As<INode>();
-                var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode);
-                movies.Add(movie);
-            }
-        }
-        catch (Exception ex)
+        foreach (var record in result)
         {
-            // Handle exceptions
-            // Log or rethrow depending on your strategy
+            var movieNode = record["m"].As<INode>();
+            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode);
+            movies.Add(movie);
         }
 
         return movies;
@@ -359,6 +354,44 @@ public class MovieRepository : IMovieRepository
                     aspectRatio = backdrop.AspectRatio,
                     width = backdrop.Width,
                     height = backdrop.Height,
+                    movieId = movie.Id
+                });
+    }
+
+    private static async Task SaveMovieVideosAsync(Movie movie, IAsyncQueryRunner tx)
+    {
+        if (movie.Videos == null)
+        {
+            return;
+        }
+
+        // First, detach all existing video relationships from this movie to avoid duplicates
+        await tx.RunAsync(
+            @"MATCH (m:Movie {id: $movieId})-[r:HAS_VIDEO]->(v:Video)
+          DELETE r",
+            new { movieId = movie.Id });
+
+        // For each video, merge the video node and create a relationship with the movie
+        foreach (var video in movie.Videos)
+            await tx.RunAsync(
+                @"MERGE (v:Video {id: $id})
+              ON CREATE SET
+                v.name = $name,
+                v.key = $key,
+                v.site = $site,
+                v.type = $type,
+                v.size = $size
+              WITH v
+              MATCH (m:Movie {id: $movieId})
+              MERGE (m)-[:HAS_VIDEO]->(v)",
+                new
+                {
+                    id = video.Id,
+                    name = video.Name,
+                    key = video.Key,
+                    site = video.Site,
+                    type = video.Type,
+                    size = video.Size,
                     movieId = movie.Id
                 });
     }

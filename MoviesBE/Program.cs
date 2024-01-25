@@ -16,6 +16,7 @@ builder.Services.AddHttpClient<HttpService>();
 builder.Services.AddScoped<TmdbService>();
 builder.Services.AddScoped<TmdbApiService>();
 builder.Services.AddScoped<MovieBackdropService>();
+builder.Services.AddScoped<VideoService>();
 builder.Services.AddSingleton<Neo4JService>();
 builder.Services.AddSingleton(GraphDatabase.Driver(neo4JConfig["Uri"],
     AuthTokens.Basic(neo4JConfig["Username"], neo4JConfig["Password"])));

@@ -1,21 +1,22 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
-using MoviesBE.Services.TMDB;
 
-namespace MoviesBE.Services;
+namespace MoviesBE.Services.TMDB;
 
 public class TmdbApiService
 {
     private readonly string _baseUrl;
     private readonly HttpService _httpService;
     private readonly MovieBackdropService _movieBackdropService;
+    private readonly VideoService _videoService;
 
     public TmdbApiService(HttpService httpService, IConfiguration configuration,
-        MovieBackdropService movieBackdropService)
+        MovieBackdropService movieBackdropService, VideoService videoService)
     {
         _httpService = httpService;
         _baseUrl = configuration["TMDB:BaseUrl"] ?? throw new InvalidOperationException("Base URL is not configured.");
         _movieBackdropService = movieBackdropService;
+        _videoService = videoService;
     }
 
     public async Task<Movie?> FetchMovieFromTmdbAsync(int movieId)
@@ -28,8 +29,13 @@ public class TmdbApiService
             throw new InvalidOperationException($"No movie data returned for movie ID {movieId}.");
         }
 
+        // Fetch and set backdrops
         var backdrops = await _movieBackdropService.FetchMovieBackdropsAsync(movieId);
         movieResponse.Backdrops = backdrops;
+
+        // Fetch and set videos
+        var videos = await FetchMovieVideosAsync(movieId);
+        movieResponse.Videos = _videoService.OrganizeMovieVideos(videos);
 
         return movieResponse;
     }

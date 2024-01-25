@@ -56,7 +56,7 @@ public class TmdbService
                                 movie.VoteAverage > 0;
 
         var hasBackdropImages = movie.Backdrops != null && movie.Backdrops.Count > 0;
-
-        return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages;
+        var hasVideos = movie.Videos != null && movie.Videos.Count > 0;
+        return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages && hasVideos;
     }
 }

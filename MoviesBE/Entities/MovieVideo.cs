@@ -27,4 +27,10 @@ public class MovieVideo
 
     [JsonPropertyName("type")]
     public string Type { get; set; }
+
+    [JsonPropertyName("official")]
+    public bool Official { get; set; }
+
+    [JsonPropertyName("published_at")]
+    public DateTime PublishedAt { get; set; }
 }
