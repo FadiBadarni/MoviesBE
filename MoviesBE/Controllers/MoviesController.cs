@@ -12,11 +12,12 @@ public class MoviesController : ControllerBase
 {
     private readonly IMovieRepository _movieRepository;
     private readonly TmdbService _tmdbService;
-
-    public MoviesController(TmdbService tmdbService, IMovieRepository movieRepository)
+    private readonly VideoService _videoService;
+    public MoviesController(TmdbService tmdbService, IMovieRepository movieRepository, VideoService videoService)
     {
         _tmdbService = tmdbService;
         _movieRepository = movieRepository;
+        _videoService = videoService;
     }
 
     [HttpGet("{id:int}")]
@@ -43,7 +44,7 @@ public class MoviesController : ControllerBase
     [HttpGet("{id:int}/videos")]
     public async Task<ActionResult<List<MovieVideo>>> GetMovieVideos(int id)
     {
-        var videos = await _tmdbService.FetchMovieVideosAsync(id);
+        var videos = await _videoService.FetchMovieVideosAsync(id);
         return Ok(videos);
     }
 }
