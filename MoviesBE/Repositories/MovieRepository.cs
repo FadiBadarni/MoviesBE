@@ -81,6 +81,7 @@ public class MovieRepository : IMovieRepository
                         OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
                         OPTIONAL MATCH (m)-[:HAS_CAST]->(cast:Cast)
                         OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
+                        OPTIONAL MATCH (m)-[:HAS_RATING]->(r:Rating)
                         RETURN m, 
                                COLLECT(DISTINCT g) as genres, 
                                COLLECT(DISTINCT c) as companies,
@@ -89,7 +90,8 @@ public class MovieRepository : IMovieRepository
                                COLLECT(DISTINCT b) as backdrops, 
                                COLLECT(DISTINCT v) as videos,
                                COLLECT(DISTINCT cast) as castMembers, 
-                               COLLECT(DISTINCT crew) as crewMembers",
+                               COLLECT(DISTINCT crew) as crewMembers
+                               COLLECT(DISTINCT r) as ratings",
                 new { id = movieId });
 
             if (await cursor.FetchAsync())
@@ -123,6 +125,9 @@ public class MovieRepository : IMovieRepository
                     .ToList();
                 var crew = crewNodes.Select(CreditsNodeConverter.ConvertNodeToCrewMember).ToList();
 
+                var ratingsNodes = cursor.Current["ratings"].As<List<INode>>();
+                var ratings = ratingsNodes.Select(RatingNodeConverter.ConvertNodeToRating).ToList();
+
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
                 movie.Genres = genres;
                 movie.ProductionCompanies = companies;
@@ -136,6 +141,7 @@ public class MovieRepository : IMovieRepository
                     Cast = cast,
                     Crew = crew
                 };
+                movie.Ratings = ratings;
 
                 return movie;
             }
