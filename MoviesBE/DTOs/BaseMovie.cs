@@ -1,6 +1,6 @@
 ﻿namespace MoviesBE.DTOs;
 
-public class PopularMovie : BaseMovie
+public class BaseMovie
 {
     public int Id { get; set; }
     public string? Title { get; set; }

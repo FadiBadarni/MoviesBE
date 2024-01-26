@@ -42,4 +42,18 @@ public class MoviesController : ControllerBase
         return Ok(movies);
     }
 
+
+    [HttpGet("top-rated")]
+    public async Task<ActionResult<List<Movie>>> GetTopRatedMovies()
+    {
+        var movies = await _tmdbService.GetTopRatedMoviesAndSaveAsync();
+        return Ok(movies);
+    }
+
+    [HttpGet("cached-top-rated")]
+    public async Task<ActionResult<List<TopRatedMovie>>> GetCachedTopRatedMovies()
+    {
+        var movies = await _movieRepository.GetCachedTopRatedMoviesAsync();
+        return Ok(movies);
+    }
 }

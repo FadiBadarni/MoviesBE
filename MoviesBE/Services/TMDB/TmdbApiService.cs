@@ -103,4 +103,32 @@ public class TmdbApiService
 
         return _creditsService.ProcessCredits(creditsResponse);
     }
+
+    public async Task<List<Movie>> GetTopRatedMoviesAsync()
+    {
+        var genresLookup = await GetGenresAsync();
+        var movieListResult = await _httpService.SendAndDeserializeAsync<MovieListResult>($"{_baseUrl}movie/top_rated");
+
+        if (movieListResult?.Results == null)
+        {
+            return new List<Movie>();
+        }
+
+        var moviesWithGenres = new List<Movie>();
+
+        foreach (var movie in movieListResult.Results)
+        {
+            if (movie.GenreIds != null)
+            {
+                movie.Genres = movie.GenreIds
+                    .Select(id => genresLookup.GetValueOrDefault(id))
+                    .OfType<Genre>()
+                    .ToList();
+            }
+
+            moviesWithGenres.Add(movie);
+        }
+
+        return moviesWithGenres;
+    }
 }

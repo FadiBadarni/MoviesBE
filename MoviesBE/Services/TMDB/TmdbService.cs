@@ -43,6 +43,16 @@ public class TmdbService
         return popularMovies;
     }
 
+    public async Task<List<Movie>> GetTopRatedMoviesAndSaveAsync()
+    {
+        var topRatedMovies = await _tmdbApiService.GetTopRatedMoviesAsync();
+
+        foreach (var movie in topRatedMovies) await _movieRepository.SaveMovieAsync(movie);
+
+        return topRatedMovies;
+    }
+
+
     private static bool IsMovieDataComplete(Movie movie)
     {
         var hasEssentialInfo = !string.IsNullOrEmpty(movie.Title) &&
@@ -57,11 +67,10 @@ public class TmdbService
 
         var hasBackdropImages = movie.Backdrops != null && movie.Backdrops.Count > 0;
         var hasVideos = movie.Trailers != null && movie.Trailers.Count > 0;
-        var hasCredits = movie.Credits != null && 
+        var hasCredits = movie.Credits != null &&
                          movie.Credits.Cast != null && movie.Credits.Cast.Count > 0 &&
                          movie.Credits.Crew != null && movie.Credits.Crew.Count > 0;
 
         return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages && hasVideos && hasCredits;
     }
-
 }

@@ -186,6 +186,34 @@ public class MovieRepository : IMovieRepository
         return movies;
     }
 
+    public async Task<List<TopRatedMovie>> GetCachedTopRatedMoviesAsync()
+    {
+        var movies = new List<TopRatedMovie>();
+        await using var session = _neo4JDriver.AsyncSession();
+        const double ratingThreshold = 8.0; // Example threshold
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(
+                @"MATCH (m:Movie)
+                  WHERE m.voteAverage >= $ratingThreshold
+                  RETURN m ORDER BY m.voteAverage DESC",
+                new { ratingThreshold });
+
+            var records = await cursor.ToListAsync();
+            return records;
+        });
+
+        foreach (var record in result)
+        {
+            var movieNode = record["m"].As<INode>();
+            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode);
+            movies.Add(movie);
+        }
+
+        return movies;
+    }
+
     private async Task<double> GetPopularityThreshold(IAsyncSession session, int percentile)
     {
         var result = await session.ExecuteReadAsync(async tx =>
