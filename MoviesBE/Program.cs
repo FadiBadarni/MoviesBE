@@ -21,14 +21,19 @@ builder.Services.AddScoped<VideoService>();
 builder.Services.AddScoped<CreditsService>();
 builder.Services.AddScoped<PopularityThresholdService>();
 builder.Services.AddScoped<RatingThresholdService>();
-builder.Services.AddScoped<IMDbScrapingService>();
 builder.Services.AddSingleton<Neo4JService>();
 builder.Services.AddSingleton(GraphDatabase.Driver(neo4JConfig["Uri"],
     AuthTokens.Basic(neo4JConfig["Username"], neo4JConfig["Password"])));
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
 builder.Services.AddScoped<ICreditsRepository, CreditsRepository>();
-builder.Services.AddScoped<IRatingRepository, RatingRepository>();
 
+builder.Services.AddScoped<IRatingRepository, RatingRepository>();
+builder.Services.AddSingleton<RatingRepositoryFactory>();
+
+builder.Services.AddHostedService<IMDbRatingUpdateService>();
+builder.Services.AddSingleton<IMDbScrapingServiceFactory>();
+builder.Services.AddScoped<IMDbScrapingService>();
+builder.Services.AddSingleton<MovieRepositoryFactory>();
 
 // Configure logging
 builder.Logging.AddConsole();

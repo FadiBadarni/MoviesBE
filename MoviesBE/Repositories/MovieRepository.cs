@@ -228,6 +228,37 @@ public class MovieRepository : IMovieRepository
         return movies;
     }
 
+    public async Task<List<Movie>> GetMoviesWithoutIMDbRatingAsync()
+    {
+        var moviesWithoutRating = new List<Movie>();
+        await using var session = _neo4JDriver.AsyncSession();
+        try
+        {
+            var result = await session.ExecuteReadAsync(async tx =>
+            {
+                var cursor = await tx.RunAsync(
+                    @"MATCH (m:Movie)
+                      WHERE NOT (m)-[:HAS_RATING]->(:Rating {source: 'IMDb'})
+                      RETURN m");
+
+                while (await cursor.FetchAsync())
+                {
+                    var movieNode = cursor.Current["m"].As<INode>();
+                    var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
+                    moviesWithoutRating.Add(movie);
+                }
+
+                return moviesWithoutRating;
+            });
+        }
+        finally
+        {
+            await session.CloseAsync();
+        }
+
+        return moviesWithoutRating;
+    }
+
 
     private static async Task SaveMovieNodeAsync(Movie movie, IAsyncQueryRunner tx)
     {

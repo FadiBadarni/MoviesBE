@@ -22,11 +22,6 @@ public class TmdbService
     {
         var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId);
 
-        if (!string.IsNullOrEmpty(movieInDb.ImdbId))
-        {
-            var score = await _imDbScrapingService.GetIMDbRatingAsync(movieInDb.ImdbId);
-        }
-
         if (movieInDb != null && IsMovieDataComplete(movieInDb))
         {
             return movieInDb;

@@ -11,7 +11,7 @@ public class IMDbScrapingService
         _httpClient = httpClient;
     }
 
-    public async Task<string> GetIMDbRatingAsync(string imdbId)
+    public async Task<double> GetIMDbRatingAsync(string imdbId)
     {
         var url = $"https://www.imdb.com/title/{imdbId}/";
         var response = await _httpClient.GetAsync(url);
@@ -22,6 +22,13 @@ public class IMDbScrapingService
 
         var ratingNode =
             doc.DocumentNode.SelectSingleNode("//div[@data-testid='hero-rating-bar__aggregate-rating__score']/span");
-        return ratingNode?.InnerText.Trim();
+
+        // Handle the case where the rating might not be available or is invalid
+        if (ratingNode == null || !double.TryParse(ratingNode.InnerText.Trim(), out var rating))
+        {
+            return 0;
+        }
+
+        return rating;
     }
 }
