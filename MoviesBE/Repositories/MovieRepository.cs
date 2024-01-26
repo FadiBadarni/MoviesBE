@@ -1,5 +1,6 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
+using MoviesBE.Services.TMDB;
 using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
@@ -9,11 +10,16 @@ public class MovieRepository : IMovieRepository
 {
     private readonly ICreditsRepository _creditsRepository;
     private readonly IDriver _neo4JDriver;
+    private readonly PopularityThresholdService _popularityThresholdService;
+    private readonly RatingThresholdService _ratingThresholdService;
 
-    public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository)
+    public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
+        RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
+        _ratingThresholdService = ratingThresholdService;
+        _popularityThresholdService = popularityThresholdService;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -145,7 +151,7 @@ public class MovieRepository : IMovieRepository
         await using var session = _neo4JDriver.AsyncSession();
 
         var percentile = 90;
-        var popularityThreshold = await GetPopularityThreshold(session, percentile);
+        var popularityThreshold = await _popularityThresholdService.GetPopularityThreshold(session, percentile);
 
         var result = await session.ExecuteReadAsync(async tx =>
         {
@@ -162,7 +168,7 @@ public class MovieRepository : IMovieRepository
         while (result.Count < 10 && percentile >= 50)
         {
             percentile -= 10; // Decrease percentile
-            popularityThreshold = await GetPopularityThreshold(session, percentile);
+            popularityThreshold = await _popularityThresholdService.GetPopularityThreshold(session, percentile);
 
             result = await session.ExecuteReadAsync(async tx =>
             {
@@ -190,14 +196,16 @@ public class MovieRepository : IMovieRepository
     {
         var movies = new List<TopRatedMovie>();
         await using var session = _neo4JDriver.AsyncSession();
-        const double ratingThreshold = 8.0; // Example threshold
+
+        // Determine the rating threshold dynamically
+        var ratingThreshold = await _ratingThresholdService.GetRatingThreshold(session);
 
         var result = await session.ExecuteReadAsync(async tx =>
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie)
-                  WHERE m.voteAverage >= $ratingThreshold
-                  RETURN m ORDER BY m.voteAverage DESC",
+              WHERE m.voteAverage >= $ratingThreshold
+              RETURN m ORDER BY m.voteAverage DESC",
                 new { ratingThreshold });
 
             var records = await cursor.ToListAsync();
@@ -212,22 +220,6 @@ public class MovieRepository : IMovieRepository
         }
 
         return movies;
-    }
-
-    private async Task<double> GetPopularityThreshold(IAsyncSession session, int percentile)
-    {
-        var result = await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(
-                @"MATCH (m:Movie)
-              RETURN percentileCont(m.popularity, $percentile)",
-                new { percentile = percentile / 100.0 });
-
-            var record = await cursor.SingleAsync();
-            return record[0].As<double>();
-        });
-
-        return result;
     }
 
 
