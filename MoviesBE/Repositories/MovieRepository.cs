@@ -112,7 +112,9 @@ public class MovieRepository : IMovieRepository
                 var castNodes = cursor.Current["castMembers"].As<List<INode>>();
                 var crewNodes = cursor.Current["crewMembers"].As<List<INode>>();
 
-                var cast = castNodes.Select(CreditsNodeConverter.ConvertNodeToCastMember).ToList();
+                var cast = castNodes.Select(CreditsNodeConverter.ConvertNodeToCastMember)
+                    .OrderBy(c => c.Order)
+                    .ToList();
                 var crew = crewNodes.Select(CreditsNodeConverter.ConvertNodeToCrewMember).ToList();
 
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);

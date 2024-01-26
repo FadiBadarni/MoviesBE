@@ -18,7 +18,7 @@ public class TmdbService
     {
         var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId);
 
-        if (movieInDb != null && !IsMovieDataComplete(movieInDb))
+        if (movieInDb != null && IsMovieDataComplete(movieInDb))
         {
             return movieInDb;
         }
