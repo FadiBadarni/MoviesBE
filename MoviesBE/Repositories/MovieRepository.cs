@@ -7,11 +7,13 @@ namespace MoviesBE.Repositories;
 
 public class MovieRepository : IMovieRepository
 {
+    private readonly ICreditsRepository _creditsRepository;
     private readonly IDriver _neo4JDriver;
 
-    public MovieRepository(IDriver neo4JDriver)
+    public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository)
     {
         _neo4JDriver = neo4JDriver;
+        _creditsRepository = creditsRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -45,6 +47,11 @@ public class MovieRepository : IMovieRepository
                 await SaveMovieBackdropsAsync(movie, tx);
 
                 await SaveMovieVideosAsync(movie, tx);
+
+                if (movie.Credits != null)
+                {
+                    await _creditsRepository.SaveCreditsAsync(movie.Credits, movie.Id, tx);
+                }
             });
         }
         finally

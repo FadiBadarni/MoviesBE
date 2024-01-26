@@ -72,4 +72,6 @@ public class Movie
     public List<MovieBackdrop>? Backdrops { get; set; }
 
     public List<MovieVideo>? Trailers { get; set; }
+
+    public Credits? Credits { get; set; }
 }

@@ -6,17 +6,19 @@ namespace MoviesBE.Services.TMDB;
 public class TmdbApiService
 {
     private readonly string _baseUrl;
+    private readonly CreditsService _creditsService;
     private readonly HttpService _httpService;
     private readonly MovieBackdropService _movieBackdropService;
     private readonly VideoService _videoService;
 
     public TmdbApiService(HttpService httpService, IConfiguration configuration,
-        MovieBackdropService movieBackdropService, VideoService videoService)
+        MovieBackdropService movieBackdropService, VideoService videoService, CreditsService creditsService)
     {
         _httpService = httpService;
         _baseUrl = configuration["TMDB:BaseUrl"] ?? throw new InvalidOperationException("Base URL is not configured.");
         _movieBackdropService = movieBackdropService;
         _videoService = videoService;
+        _creditsService = creditsService;
     }
 
     public async Task<Movie?> FetchMovieFromTmdbAsync(int movieId)
@@ -36,6 +38,10 @@ public class TmdbApiService
         // Fetch and set videos
         var videos = await FetchMovieVideosAsync(movieId);
         movieResponse.Trailers = _videoService.OrganizeMovieVideos(videos);
+
+        // Fetch and set credits
+        var credits = await FetchMovieCreditsAsync(movieId);
+        movieResponse.Credits = credits;
 
         return movieResponse;
     }
@@ -83,5 +89,18 @@ public class TmdbApiService
         var videosResponse = await _httpService.SendAndDeserializeAsync<MovieVideosResponse>(requestUri);
 
         return videosResponse?.Videos ?? new List<MovieVideo>();
+    }
+
+    public async Task<Credits> FetchMovieCreditsAsync(int movieId)
+    {
+        var requestUri = $"{_baseUrl}movie/{movieId}/credits";
+        var creditsResponse = await _httpService.SendAndDeserializeAsync<Credits>(requestUri);
+
+        if (creditsResponse == null)
+        {
+            throw new InvalidOperationException($"No credits data returned for movie ID {movieId}.");
+        }
+
+        return creditsResponse;
     }
 }
