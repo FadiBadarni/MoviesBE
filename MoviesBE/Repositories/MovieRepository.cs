@@ -198,15 +198,15 @@ public class MovieRepository : IMovieRepository
         await using var session = _neo4JDriver.AsyncSession();
 
         // Determine the rating threshold dynamically
-        var ratingThreshold = await _ratingThresholdService.GetRatingThreshold(session);
+        var (ratingThreshold, minimumVotesThreshold) = await _ratingThresholdService.GetThresholds(session);
 
         var result = await session.ExecuteReadAsync(async tx =>
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie)
-              WHERE m.voteAverage >= $ratingThreshold
-              RETURN m ORDER BY m.voteAverage DESC",
-                new { ratingThreshold });
+          WHERE m.voteAverage >= $ratingThreshold AND m.voteCount >= $minimumVotesThreshold
+          RETURN m ORDER BY m.voteAverage DESC",
+                new { ratingThreshold, minimumVotesThreshold });
 
             var records = await cursor.ToListAsync();
             return records;
