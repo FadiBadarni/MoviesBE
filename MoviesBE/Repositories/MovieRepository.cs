@@ -113,7 +113,7 @@ public class MovieRepository : IMovieRepository
                 var crewNodes = cursor.Current["crewMembers"].As<List<INode>>();
 
                 var cast = castNodes.Select(CreditsNodeConverter.ConvertNodeToCastMember)
-                    .OrderBy(c => c.Order)
+                    .OrderByDescending(c => c.Popularity)
                     .ToList();
                 var crew = crewNodes.Select(CreditsNodeConverter.ConvertNodeToCrewMember).ToList();
 
@@ -143,19 +143,38 @@ public class MovieRepository : IMovieRepository
     {
         var movies = new List<PopularMovie>();
         await using var session = _neo4JDriver.AsyncSession();
-        const double popularityThreshold = 50;
+
+        var percentile = 90;
+        var popularityThreshold = await GetPopularityThreshold(session, percentile);
 
         var result = await session.ExecuteReadAsync(async tx =>
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie)
-                          WHERE m.popularity >= $popularityThreshold
-                          RETURN m",
+              WHERE m.popularity >= $popularityThreshold
+              RETURN m",
                 new { popularityThreshold });
 
             var records = await cursor.ToListAsync();
             return records;
         });
+
+        while (result.Count < 10 && percentile >= 50)
+        {
+            percentile -= 10; // Decrease percentile
+            popularityThreshold = await GetPopularityThreshold(session, percentile);
+
+            result = await session.ExecuteReadAsync(async tx =>
+            {
+                var cursor = await tx.RunAsync(
+                    @"MATCH (m:Movie)
+                  WHERE m.popularity >= $popularityThreshold
+                  RETURN m",
+                    new { popularityThreshold });
+
+                return await cursor.ToListAsync();
+            });
+        }
 
         foreach (var record in result)
         {
@@ -166,6 +185,23 @@ public class MovieRepository : IMovieRepository
 
         return movies;
     }
+
+    private async Task<double> GetPopularityThreshold(IAsyncSession session, int percentile)
+    {
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(
+                @"MATCH (m:Movie)
+              RETURN percentileCont(m.popularity, $percentile)",
+                new { percentile = percentile / 100.0 });
+
+            var record = await cursor.SingleAsync();
+            return record[0].As<double>();
+        });
+
+        return result;
+    }
+
 
     private static async Task SaveMovieNodeAsync(Movie movie, IAsyncQueryRunner tx)
     {
