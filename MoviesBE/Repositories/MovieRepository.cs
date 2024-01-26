@@ -60,14 +60,15 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
-                OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
-                OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
-                OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
-                OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
-                RETURN m, COLLECT(DISTINCT g) as genres, COLLECT(DISTINCT c) as companies,
+                    OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                    OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
+                    OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
+                    OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
+                    OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
+                    OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
+                    RETURN m, COLLECT(DISTINCT g) as genres, COLLECT(DISTINCT c) as companies,
                            COLLECT(DISTINCT pc) as countries, COLLECT(DISTINCT sl) as languages,
-                           COLLECT(DISTINCT b) as backdrops",
+                           COLLECT(DISTINCT b) as backdrops, COLLECT(DISTINCT v) as videos",
                 new { id = movieId });
 
             if (await cursor.FetchAsync())
@@ -90,12 +91,16 @@ public class MovieRepository : IMovieRepository
                     .ThenByDescending(b => b.Width * b.Height) // Then by size
                     .ToList();
 
+                var videos = cursor.Current["videos"].As<List<INode>>()
+                    .Select(MovieVideoNodeConverter.ConvertNodeToVideo).ToList();
+
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
                 movie.Genres = genres;
                 movie.ProductionCompanies = companies;
                 movie.ProductionCountries = countries;
                 movie.SpokenLanguages = languages;
                 movie.Backdrops = backdrops;
+                movie.Trailers = videos;
 
                 return movie;
             }
@@ -360,7 +365,7 @@ public class MovieRepository : IMovieRepository
 
     private static async Task SaveMovieVideosAsync(Movie movie, IAsyncQueryRunner tx)
     {
-        if (movie.Videos == null)
+        if (movie.Trailers == null)
         {
             return;
         }
@@ -372,7 +377,7 @@ public class MovieRepository : IMovieRepository
             new { movieId = movie.Id });
 
         // For each video, merge the video node and create a relationship with the movie
-        foreach (var video in movie.Videos)
+        foreach (var video in movie.Trailers)
             await tx.RunAsync(
                 @"MERGE (v:Video {id: $id})
               ON CREATE SET

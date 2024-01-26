@@ -35,7 +35,7 @@ public class TmdbApiService
 
         // Fetch and set videos
         var videos = await FetchMovieVideosAsync(movieId);
-        movieResponse.Videos = _videoService.OrganizeMovieVideos(videos);
+        movieResponse.Trailers = _videoService.OrganizeMovieVideos(videos);
 
         return movieResponse;
     }

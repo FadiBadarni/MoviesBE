@@ -71,5 +71,5 @@ public class Movie
 
     public List<MovieBackdrop>? Backdrops { get; set; }
 
-    public List<MovieVideo>? Videos { get; set; }
+    public List<MovieVideo>? Trailers { get; set; }
 }
