@@ -23,18 +23,18 @@ public class RatingRepository : IRatingRepository
         // First, remove existing ratings for this movie.
         await tx.RunAsync(
             @"MATCH (m:Movie {id: $movieId})-[r:HAS_RATING]->(rating:Rating)
-              DELETE r",
+          DELETE r",
             new { movieId });
 
-        // Then, save each new rating and create a relationship with the movie.
+        // Then, create a new rating node for each rating and create a relationship with the movie.
         foreach (var rating in ratings)
+        {
             await tx.RunAsync(
-                @"MERGE (r:Rating {source: $source})
-                  ON CREATE SET r.score = $score
-                  ON MATCH SET r.score = $score
-                  WITH r
-                  MATCH (m:Movie {id: $movieId})
-                  MERGE (m)-[:HAS_RATING]->(r)",
+                @"MATCH (m:Movie {id: $movieId})
+              CREATE (r:Rating {source: $source, score: $score, movieId: $movieId})
+              MERGE (m)-[:HAS_RATING]->(r)",
                 new { source = rating.Provider, score = rating.Score, movieId });
+        }
     }
+
 }

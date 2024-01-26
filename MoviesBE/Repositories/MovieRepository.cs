@@ -90,7 +90,7 @@ public class MovieRepository : IMovieRepository
                                COLLECT(DISTINCT b) as backdrops, 
                                COLLECT(DISTINCT v) as videos,
                                COLLECT(DISTINCT cast) as castMembers, 
-                               COLLECT(DISTINCT crew) as crewMembers
+                               COLLECT(DISTINCT crew) as crewMembers,
                                COLLECT(DISTINCT r) as ratings",
                 new { id = movieId });
 
