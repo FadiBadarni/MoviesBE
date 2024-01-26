@@ -17,7 +17,7 @@ public class CreditsService
 
     private static List<CrewMember> FilterKeyCrewMembers(IEnumerable<CrewMember> crew)
     {
-        var keyRoles = new HashSet<string> { "Director", "Writer" };
+        var keyRoles = new HashSet<string> { "Director", "Writer", "Producer" };
 
         // Filter the crew members to include only those with the specified key roles
         return crew.Where(member => member.Job != null && keyRoles.Contains(member.Job)).ToList();

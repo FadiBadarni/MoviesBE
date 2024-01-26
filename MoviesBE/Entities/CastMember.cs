@@ -19,9 +19,6 @@ public class CastMember
     [JsonPropertyName("name")]
     public string? Name { get; init; }
 
-    [JsonPropertyName("original_name")]
-    public string? OriginalName { get; init; }
-
     [JsonPropertyName("popularity")]
     public double Popularity { get; init; }
 

@@ -67,15 +67,23 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                    OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
-                    OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
-                    OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
-                    OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
-                    OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
-                    OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
-                    RETURN m, COLLECT(DISTINCT g) as genres, COLLECT(DISTINCT c) as companies,
-                           COLLECT(DISTINCT pc) as countries, COLLECT(DISTINCT sl) as languages,
-                           COLLECT(DISTINCT b) as backdrops, COLLECT(DISTINCT v) as videos",
+                        OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                        OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
+                        OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
+                        OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
+                        OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
+                        OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
+                        OPTIONAL MATCH (m)-[:HAS_CAST]->(cast:Cast)
+                        OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
+                        RETURN m, 
+                               COLLECT(DISTINCT g) as genres, 
+                               COLLECT(DISTINCT c) as companies,
+                               COLLECT(DISTINCT pc) as countries, 
+                               COLLECT(DISTINCT sl) as languages,
+                               COLLECT(DISTINCT b) as backdrops, 
+                               COLLECT(DISTINCT v) as videos,
+                               COLLECT(DISTINCT cast) as castMembers, 
+                               COLLECT(DISTINCT crew) as crewMembers",
                 new { id = movieId });
 
             if (await cursor.FetchAsync())
@@ -101,6 +109,12 @@ public class MovieRepository : IMovieRepository
                 var videos = cursor.Current["videos"].As<List<INode>>()
                     .Select(MovieVideoNodeConverter.ConvertNodeToVideo).ToList();
 
+                var castNodes = cursor.Current["castMembers"].As<List<INode>>();
+                var crewNodes = cursor.Current["crewMembers"].As<List<INode>>();
+
+                var cast = castNodes.Select(CreditsNodeConverter.ConvertNodeToCastMember).ToList();
+                var crew = crewNodes.Select(CreditsNodeConverter.ConvertNodeToCrewMember).ToList();
+
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
                 movie.Genres = genres;
                 movie.ProductionCompanies = companies;
@@ -108,6 +122,12 @@ public class MovieRepository : IMovieRepository
                 movie.SpokenLanguages = languages;
                 movie.Backdrops = backdrops;
                 movie.Trailers = videos;
+                movie.Credits = new Credits
+                {
+                    Id = movieId,
+                    Cast = cast,
+                    Crew = crew
+                };
 
                 return movie;
             }
