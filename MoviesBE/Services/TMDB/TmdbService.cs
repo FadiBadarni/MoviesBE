@@ -1,22 +1,31 @@
 ﻿using MoviesBE.Entities;
 using MoviesBE.Repositories;
+using MoviesBE.Services.IMDB;
 
 namespace MoviesBE.Services.TMDB;
 
 public class TmdbService
 {
+    private readonly IMDbScrapingService _imDbScrapingService;
     private readonly IMovieRepository _movieRepository;
     private readonly TmdbApiService _tmdbApiService;
 
-    public TmdbService(TmdbApiService tmdbApiService, IMovieRepository movieRepository)
+    public TmdbService(TmdbApiService tmdbApiService, IMovieRepository movieRepository,
+        IMDbScrapingService imDbScrapingService)
     {
         _tmdbApiService = tmdbApiService;
         _movieRepository = movieRepository;
+        _imDbScrapingService = imDbScrapingService;
     }
 
     public async Task<Movie> GetMovieAsync(int movieId)
     {
         var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId);
+
+        if (!string.IsNullOrEmpty(movieInDb.ImdbId))
+        {
+            var score = await _imDbScrapingService.GetIMDbRatingAsync(movieInDb.ImdbId);
+        }
 
         if (movieInDb != null && IsMovieDataComplete(movieInDb))
         {

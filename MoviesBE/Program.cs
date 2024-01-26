@@ -2,6 +2,7 @@ using MoviesBE.Middleware;
 using MoviesBE.Repositories;
 using MoviesBE.Services;
 using MoviesBE.Services.Database;
+using MoviesBE.Services.IMDB;
 using MoviesBE.Services.TMDB;
 using Neo4j.Driver;
 
@@ -20,6 +21,7 @@ builder.Services.AddScoped<VideoService>();
 builder.Services.AddScoped<CreditsService>();
 builder.Services.AddScoped<PopularityThresholdService>();
 builder.Services.AddScoped<RatingThresholdService>();
+builder.Services.AddScoped<IMDbScrapingService>();
 builder.Services.AddSingleton<Neo4JService>();
 builder.Services.AddSingleton(GraphDatabase.Driver(neo4JConfig["Uri"],
     AuthTokens.Basic(neo4JConfig["Username"], neo4JConfig["Password"])));

@@ -74,4 +74,6 @@ public class Movie
     public List<MovieVideo>? Trailers { get; set; }
 
     public Credits? Credits { get; set; }
+
+    public List<Rating> Ratings { get; set; } = new();
 }
