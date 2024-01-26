@@ -8,8 +8,8 @@ public class Credits
     public int Id { get; init; }
 
     [JsonPropertyName("cast")]
-    public List<CastMember>? Cast { get; init; }
+    public List<CastMember>? Cast { get; set; }
 
     [JsonPropertyName("crew")]
-    public List<CrewMember>? Crew { get; init; }
+    public List<CrewMember>? Crew { get; set; }
 }

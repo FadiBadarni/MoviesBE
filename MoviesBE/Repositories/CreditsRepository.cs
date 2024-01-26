@@ -22,6 +22,12 @@ public class CreditsRepository : ICreditsRepository
 
     private async Task SaveCastAsync(IEnumerable<CastMember> cast, int movieId, IAsyncQueryRunner tx)
     {
+        // Detach old cast relationships
+        var detachQuery = @"
+        MATCH (m:Movie {id: $movieId})-[r:HAS_CAST]->(c:Cast)
+        DELETE r";
+        await tx.RunAsync(detachQuery, new { movieId });
+
         foreach (var member in cast)
         {
             var query = @"
@@ -76,6 +82,12 @@ public class CreditsRepository : ICreditsRepository
 
     private async Task SaveCrewAsync(IEnumerable<CrewMember> crew, int movieId, IAsyncQueryRunner tx)
     {
+        // Detach old crew relationships
+        var detachQuery = @"
+                            MATCH (m:Movie {id: $movieId})-[r:HAS_CREW]->(cr:Crew)
+                            DELETE r";
+        await tx.RunAsync(detachQuery, new { movieId });
+
         foreach (var member in crew)
         {
             var query = @"

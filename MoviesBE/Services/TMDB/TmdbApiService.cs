@@ -101,6 +101,6 @@ public class TmdbApiService
             throw new InvalidOperationException($"No credits data returned for movie ID {movieId}.");
         }
 
-        return creditsResponse;
+        return _creditsService.ProcessCredits(creditsResponse);
     }
 }
