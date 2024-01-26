@@ -5,8 +5,10 @@ namespace MoviesBE.Repositories;
 
 public class CreditsRepository : ICreditsRepository
 {
-    public async Task SaveCreditsAsync(Credits credits, int movieId, IAsyncQueryRunner tx)
+    public async Task SaveCreditsAsync(Credits credits, IAsyncQueryRunner tx)
     {
+        var movieId = credits.Id;
+
         if (credits.Cast != null)
         {
             await SaveCastAsync(credits.Cast, movieId, tx);

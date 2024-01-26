@@ -5,5 +5,5 @@ namespace MoviesBE.Repositories;
 
 public interface ICreditsRepository
 {
-    Task SaveCreditsAsync(Credits credits, int movieId, IAsyncQueryRunner tx);
+    Task SaveCreditsAsync(Credits credits, IAsyncQueryRunner tx);
 }

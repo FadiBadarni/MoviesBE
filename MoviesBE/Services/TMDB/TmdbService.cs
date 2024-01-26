@@ -57,6 +57,11 @@ public class TmdbService
 
         var hasBackdropImages = movie.Backdrops != null && movie.Backdrops.Count > 0;
         var hasVideos = movie.Trailers != null && movie.Trailers.Count > 0;
-        return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages && hasVideos;
+        var hasCredits = movie.Credits != null && 
+                         movie.Credits.Cast != null && movie.Credits.Cast.Count > 0 &&
+                         movie.Credits.Crew != null && movie.Credits.Crew.Count > 0;
+
+        return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages && hasVideos && hasCredits;
     }
+
 }

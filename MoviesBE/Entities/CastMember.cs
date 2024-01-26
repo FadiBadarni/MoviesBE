@@ -14,13 +14,13 @@ public class CastMember
     public int Id { get; init; }
 
     [JsonPropertyName("known_for_department")]
-    public string KnownForDepartment { get; init; }
+    public string? KnownForDepartment { get; init; }
 
     [JsonPropertyName("name")]
-    public string Name { get; init; }
+    public string? Name { get; init; }
 
     [JsonPropertyName("original_name")]
-    public string OriginalName { get; init; }
+    public string? OriginalName { get; init; }
 
     [JsonPropertyName("popularity")]
     public double Popularity { get; init; }
@@ -32,10 +32,10 @@ public class CastMember
     public int CastId { get; init; }
 
     [JsonPropertyName("character")]
-    public string Character { get; init; }
+    public string? Character { get; init; }
 
     [JsonPropertyName("credit_id")]
-    public string CreditId { get; init; }
+    public string? CreditId { get; init; }
 
     [JsonPropertyName("order")]
     public int Order { get; init; }

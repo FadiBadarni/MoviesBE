@@ -50,7 +50,7 @@ public class MovieRepository : IMovieRepository
 
                 if (movie.Credits != null)
                 {
-                    await _creditsRepository.SaveCreditsAsync(movie.Credits, movie.Id, tx);
+                    await _creditsRepository.SaveCreditsAsync(movie.Credits, tx);
                 }
             });
         }
