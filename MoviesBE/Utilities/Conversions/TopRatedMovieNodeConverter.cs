@@ -18,8 +18,7 @@ public static class TopRatedMovieNodeConverter
                 ? node.Properties["releaseDate"].As<string>()
                 : string.Empty,
             Overview =
-                node.Properties.ContainsKey("overview") ? node.Properties["overview"].As<string>() : string.Empty,
-            Rating = node.Properties.ContainsKey("rating") ? node.Properties["rating"].As<double>() : 0
+                node.Properties.ContainsKey("overview") ? node.Properties["overview"].As<string>() : string.Empty
         };
     }
 }
