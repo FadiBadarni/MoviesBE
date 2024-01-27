@@ -1,7 +1,7 @@
 ﻿using MoviesBE.Entities;
 using Neo4j.Driver;
 
-namespace MoviesBE.Repositories;
+namespace MoviesBE.Repositories.Interfaces;
 
 public interface IRatingRepository
 {

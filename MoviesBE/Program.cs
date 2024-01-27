@@ -1,7 +1,9 @@
 using MoviesBE.Middleware;
-using MoviesBE.Repositories;
+using MoviesBE.Repositories.Implementations;
+using MoviesBE.Repositories.Interfaces;
 using MoviesBE.Services;
 using MoviesBE.Services.Database;
+using MoviesBE.Services.Factories;
 using MoviesBE.Services.IMDB;
 using MoviesBE.Services.TMDB;
 using Neo4j.Driver;

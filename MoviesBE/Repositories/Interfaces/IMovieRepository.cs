@@ -1,7 +1,7 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
 
-namespace MoviesBE.Repositories;
+namespace MoviesBE.Repositories.Interfaces;
 
 public interface IMovieRepository
 {

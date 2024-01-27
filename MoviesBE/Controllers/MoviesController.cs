@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MoviesBE.DTOs;
 using MoviesBE.Entities;
-using MoviesBE.Repositories;
+using MoviesBE.Repositories.Interfaces;
 using MoviesBE.Services.TMDB;
 
 namespace MoviesBE.Controllers;
@@ -10,15 +10,13 @@ namespace MoviesBE.Controllers;
 [Route("[controller]")]
 public class MoviesController : ControllerBase
 {
-    private readonly IMovieRepository _movieRepository;
     private readonly MovieDataService _movieDataService;
-    private readonly MovieVideoOrganizerService _movieVideoOrganizerService;
+    private readonly IMovieRepository _movieRepository;
 
-    public MoviesController(MovieDataService movieDataService, IMovieRepository movieRepository, MovieVideoOrganizerService movieVideoOrganizerService)
+    public MoviesController(MovieDataService movieDataService, IMovieRepository movieRepository)
     {
         _movieDataService = movieDataService;
         _movieRepository = movieRepository;
-        _movieVideoOrganizerService = movieVideoOrganizerService;
     }
 
     [HttpGet("{id:int}")]

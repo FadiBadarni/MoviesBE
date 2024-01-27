@@ -1,7 +1,8 @@
 ﻿using MoviesBE.Entities;
+using MoviesBE.Repositories.Interfaces;
 using Neo4j.Driver;
 
-namespace MoviesBE.Repositories;
+namespace MoviesBE.Repositories.Implementations;
 
 public class RatingRepository : IRatingRepository
 {
@@ -28,13 +29,10 @@ public class RatingRepository : IRatingRepository
 
         // Then, create a new rating node for each rating and create a relationship with the movie.
         foreach (var rating in ratings)
-        {
             await tx.RunAsync(
                 @"MATCH (m:Movie {id: $movieId})
               CREATE (r:Rating {source: $source, score: $score, movieId: $movieId})
               MERGE (m)-[:HAS_RATING]->(r)",
                 new { source = rating.Provider, score = rating.Score, movieId });
-        }
     }
-
 }

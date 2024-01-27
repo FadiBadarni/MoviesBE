@@ -1,4 +1,5 @@
 ﻿using MoviesBE.Entities;
+using MoviesBE.Services.Factories;
 
 namespace MoviesBE.Services.IMDB;
 
@@ -8,7 +9,7 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
     private readonly ILogger<IMDbRatingUpdateService> _logger;
     private readonly MovieRepositoryFactory _movieRepositoryFactory;
     private readonly RatingRepositoryFactory _ratingRepositoryFactory;
-    private Timer _timer;
+    private Timer? _timer;
 
     public IMDbRatingUpdateService(ILogger<IMDbRatingUpdateService> logger,
         IMDbScrapingServiceFactory imdbScrapingServiceFactory,
@@ -24,6 +25,7 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
     public void Dispose()
     {
         _timer?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -31,7 +33,7 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
         _logger.LogInformation("IMDb Rating Update Service running.");
 
         _timer = new Timer(UpdateRatings, null, TimeSpan.Zero,
-            TimeSpan.FromHours(24)); // Adjust interval as needed
+            TimeSpan.FromHours(24));
 
         return Task.CompletedTask;
     }
@@ -45,29 +47,34 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    private async void UpdateRatings(object state)
+    private async void UpdateRatings(object? state)
     {
         var movieRepository = _movieRepositoryFactory.Create();
         var movies = await movieRepository.GetMoviesWithoutIMDbRatingAsync();
 
         foreach (var movie in movies)
         {
+            if (string.IsNullOrWhiteSpace(movie.ImdbId))
+            {
+                _logger.LogInformation($"Skipping movie ID {movie.Id} as IMDb ID is missing.");
+                continue; // Skip movies with no IMDb ID
+            }
+
             try
             {
-                // Use the factory to create an instance of IMDbScrapingService
                 var imdbScrapingService = _imdbScrapingServiceFactory.Create();
-
-                // Now use this instance to call GetIMDbRatingAsync
                 var rating = await imdbScrapingService.GetIMDbRatingAsync(movie.ImdbId);
 
-                if (rating != null)
+                // Update the rating if a valid value is returned, or if the existing rating is 0
+                if (rating > 0 || (rating == 0 && movie.Ratings.Any(r => r.Provider == "IMDb" && r.Score == 0)))
                 {
-                    // Use the RatingRepositoryFactory to create an instance of IRatingRepository
                     var ratingRepository = _ratingRepositoryFactory.Create();
-
-                    // Save the updated movie ratings
                     await ratingRepository.UpdateMovieRatingsAsync(movie.Id,
                         new List<Rating> { new() { Provider = "IMDb", Score = rating } });
+                }
+                else
+                {
+                    _logger.LogWarning($"No valid IMDb rating found for movie ID {movie.Id}.");
                 }
             }
             catch (Exception ex)
@@ -75,7 +82,7 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
                 _logger.LogError(ex, $"Error updating IMDb rating for movie ID {movie.Id}");
             }
 
-            await Task.Delay(10000); // Delay between requests to avoid rate limiting
+            await Task.Delay(10000);
         }
     }
 }

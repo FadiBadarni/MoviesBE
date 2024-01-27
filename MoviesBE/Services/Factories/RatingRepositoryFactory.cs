@@ -1,6 +1,6 @@
-﻿using MoviesBE.Repositories;
+﻿using MoviesBE.Repositories.Interfaces;
 
-namespace MoviesBE.Services.IMDB;
+namespace MoviesBE.Services.Factories;
 
 public class RatingRepositoryFactory
 {

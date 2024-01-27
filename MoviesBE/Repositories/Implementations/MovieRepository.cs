@@ -1,10 +1,11 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
+using MoviesBE.Repositories.Interfaces;
 using MoviesBE.Services.TMDB;
 using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
-namespace MoviesBE.Repositories;
+namespace MoviesBE.Repositories.Implementations;
 
 public class MovieRepository : IMovieRepository
 {
@@ -230,7 +231,7 @@ public class MovieRepository : IMovieRepository
 
     public async Task<List<Movie>> GetMoviesWithoutIMDbRatingAsync()
     {
-        var moviesWithoutRating = new List<Movie>();
+        var moviesToUpdate = new List<Movie>();
         await using var session = _neo4JDriver.AsyncSession();
         try
         {
@@ -238,17 +239,18 @@ public class MovieRepository : IMovieRepository
             {
                 var cursor = await tx.RunAsync(
                     @"MATCH (m:Movie)
-                      WHERE NOT (m)-[:HAS_RATING]->(:Rating {source: 'IMDb'})
-                      RETURN m");
+                  OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {source: 'IMDb'})
+                  WHERE r IS NULL OR rating.score = 0
+                  RETURN m");
 
                 while (await cursor.FetchAsync())
                 {
                     var movieNode = cursor.Current["m"].As<INode>();
                     var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
-                    moviesWithoutRating.Add(movie);
+                    moviesToUpdate.Add(movie);
                 }
 
-                return moviesWithoutRating;
+                return moviesToUpdate;
             });
         }
         finally
@@ -256,9 +258,8 @@ public class MovieRepository : IMovieRepository
             await session.CloseAsync();
         }
 
-        return moviesWithoutRating;
+        return moviesToUpdate;
     }
-
 
     private static async Task SaveMovieNodeAsync(Movie movie, IAsyncQueryRunner tx)
     {
