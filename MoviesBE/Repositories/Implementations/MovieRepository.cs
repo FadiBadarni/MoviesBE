@@ -239,7 +239,7 @@ public class MovieRepository : IMovieRepository
             {
                 var cursor = await tx.RunAsync(
                     @"MATCH (m:Movie)
-                  OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {source: 'IMDb'})
+                  OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'IMDb'})
                   WHERE r IS NULL OR rating.score = 0
                   RETURN m");
 

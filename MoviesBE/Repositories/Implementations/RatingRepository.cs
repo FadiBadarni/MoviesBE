@@ -31,8 +31,10 @@ public class RatingRepository : IRatingRepository
         foreach (var rating in ratings)
             await tx.RunAsync(
                 @"MATCH (m:Movie {id: $movieId})
-              CREATE (r:Rating {source: $source, score: $score, movieId: $movieId})
+              MERGE (r:Rating {provider: $provider, movieId: $movieId})
+              ON CREATE SET r.score = $score
+              ON MATCH SET r.score = $score
               MERGE (m)-[:HAS_RATING]->(r)",
-                new { source = rating.Provider, score = rating.Score, movieId });
+                new { provider = rating.Provider, score = rating.Score, movieId });
     }
 }

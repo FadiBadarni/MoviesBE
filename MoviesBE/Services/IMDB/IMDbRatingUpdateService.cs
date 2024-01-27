@@ -8,6 +8,7 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
 {
     private readonly IConfiguration _configuration;
     private readonly IMDbScrapingServiceFactory _imdbScrapingServiceFactory;
+    private readonly bool _isEnabled;
     private readonly ILogger<IMDbRatingUpdateService> _logger;
     private readonly MovieRepositoryFactory _movieRepositoryFactory;
     private readonly RatingRepositoryFactory _ratingRepositoryFactory;
@@ -24,6 +25,7 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
         _movieRepositoryFactory = movieRepositoryFactory;
         _ratingRepositoryFactory = ratingRepositoryFactory;
         _configuration = configuration;
+        _isEnabled = configuration.GetValue<bool>("IMDbUpdate:Enabled");
     }
 
     public void Dispose()
@@ -34,11 +36,18 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("IMDb Rating Update Service running.");
+        _logger.LogInformation("IMDb Rating Update Service is starting.");
         _stoppingToken = cancellationToken;
 
-        _timer = new Timer(UpdateRatings, null, TimeSpan.Zero,
-            TimeSpan.FromHours(24));
+        if (_isEnabled)
+        {
+            _logger.LogInformation("IMDb Rating Update Service is enabled and will run.");
+            _timer = new Timer(UpdateRatings, null, TimeSpan.Zero, TimeSpan.FromHours(24));
+        }
+        else
+        {
+            _logger.LogInformation("IMDb Rating Update Service is disabled and will not run.");
+        }
 
         return Task.CompletedTask;
     }
@@ -53,6 +62,12 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
 
     private async void UpdateRatings(object? state)
     {
+        if (!_isEnabled)
+        {
+            _logger.LogInformation("IMDb Rating Update Service is disabled, exiting update loop.");
+            return;
+        }
+
         var movieRepository = _movieRepositoryFactory.Create();
         var movies = await movieRepository.GetMoviesWithoutIMDbRatingAsync();
         var delayConfig = _configuration.GetValue<int>("IMDbUpdate:DelayMilliseconds");
