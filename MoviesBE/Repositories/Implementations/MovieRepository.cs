@@ -249,10 +249,12 @@ public class MovieRepository : IMovieRepository
                 _logger.LogInformation("Fetching movies without IMDb ratings.");
                 var cursor = await tx.RunAsync(
                     @"MATCH (m:Movie)
+                              WHERE m.imdbId IS NOT NULL
                               OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'IMDb'})
                               WITH m, rating
                               WHERE rating IS NULL OR rating.score = 0
                               RETURN m");
+
 
                 while (await cursor.FetchAsync())
                 {
