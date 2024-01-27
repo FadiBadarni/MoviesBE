@@ -37,6 +37,7 @@ builder.Services.AddSingleton<IMDbScrapingServiceFactory>();
 builder.Services.AddScoped<IMDbScrapingService>();
 builder.Services.AddSingleton<MovieRepositoryFactory>();
 
+
 // Configure logging
 builder.Logging.AddConsole();
 
