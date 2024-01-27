@@ -213,10 +213,14 @@ public class MovieRepository : IMovieRepository
         var result = await session.ExecuteReadAsync(async tx =>
         {
             var cursor = await tx.RunAsync(
-                @"MATCH (m:Movie)-[:HAS_RATING]->(r:Rating)
-          WHERE m.voteAverage >= $ratingThreshold AND m.voteCount >= $minimumVotesThreshold
-          RETURN m, COLLECT(r) AS Ratings
-          ORDER BY m.voteAverage DESC",
+                @"MATCH (m:Movie)
+                        WHERE m.voteCount >= $minimumVotesThreshold
+                        OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
+                        WITH m, r
+                        WHERE r IS NULL OR (r.provider = 'IMDb' AND r.score >= $ratingThreshold)
+                        RETURN m, COLLECT(r) AS Ratings
+                        ORDER BY m.voteAverage DESC, m.voteCount DESC
+                        ",
                 new { ratingThreshold, minimumVotesThreshold });
 
             var records = await cursor.ToListAsync();
