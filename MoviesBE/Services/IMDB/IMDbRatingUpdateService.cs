@@ -1,25 +1,29 @@
-﻿using MoviesBE.Entities;
+﻿using System.Security.Cryptography;
+using MoviesBE.Entities;
 using MoviesBE.Services.Factories;
 
 namespace MoviesBE.Services.IMDB;
 
 public class IMDbRatingUpdateService : IHostedService, IDisposable
 {
+    private readonly IConfiguration _configuration;
     private readonly IMDbScrapingServiceFactory _imdbScrapingServiceFactory;
     private readonly ILogger<IMDbRatingUpdateService> _logger;
     private readonly MovieRepositoryFactory _movieRepositoryFactory;
     private readonly RatingRepositoryFactory _ratingRepositoryFactory;
+    private CancellationToken _stoppingToken;
     private Timer? _timer;
 
     public IMDbRatingUpdateService(ILogger<IMDbRatingUpdateService> logger,
         IMDbScrapingServiceFactory imdbScrapingServiceFactory,
         MovieRepositoryFactory movieRepositoryFactory,
-        RatingRepositoryFactory ratingRepositoryFactory)
+        RatingRepositoryFactory ratingRepositoryFactory, IConfiguration configuration)
     {
         _logger = logger;
         _imdbScrapingServiceFactory = imdbScrapingServiceFactory;
         _movieRepositoryFactory = movieRepositoryFactory;
         _ratingRepositoryFactory = ratingRepositoryFactory;
+        _configuration = configuration;
     }
 
     public void Dispose()
@@ -31,6 +35,7 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("IMDb Rating Update Service running.");
+        _stoppingToken = cancellationToken;
 
         _timer = new Timer(UpdateRatings, null, TimeSpan.Zero,
             TimeSpan.FromHours(24));
@@ -43,7 +48,6 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
         _logger.LogInformation("IMDb Rating Update Service is stopping.");
 
         _timer?.Change(Timeout.Infinite, 0);
-
         return Task.CompletedTask;
     }
 
@@ -51,9 +55,16 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
     {
         var movieRepository = _movieRepositoryFactory.Create();
         var movies = await movieRepository.GetMoviesWithoutIMDbRatingAsync();
+        var delayConfig = _configuration.GetValue<int>("IMDbUpdate:DelayMilliseconds");
 
         foreach (var movie in movies)
         {
+            if (_stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Cancellation requested, stopping IMDb Rating Update Service.");
+                break;
+            }
+
             if (string.IsNullOrWhiteSpace(movie.ImdbId))
             {
                 _logger.LogInformation($"Skipping movie ID {movie.Id} as IMDb ID is missing.");
@@ -77,12 +88,42 @@ public class IMDbRatingUpdateService : IHostedService, IDisposable
                     _logger.LogWarning($"No valid IMDb rating found for movie ID {movie.Id}.");
                 }
             }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Operation canceled during IMDb rating update.");
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error updating IMDb rating for movie ID {movie.Id}");
             }
 
-            await Task.Delay(10000);
+            await Task.Delay(GetRandomizedDelay(delayConfig), _stoppingToken);
         }
+    }
+
+    private int GetRandomizedDelay(int baseDelay)
+    {
+        var jitterRange = GetJitterRange();
+        using var rng = RandomNumberGenerator.Create();
+        var jitterBytes = new byte[4];
+        rng.GetBytes(jitterBytes);
+        var jitter = BitConverter.ToInt32(jitterBytes, 0);
+
+        // Ensure jitter is non-negative and within the jitter range
+        jitter = Math.Abs(jitter % jitterRange);
+
+        // Calculate the total delay, ensuring it's within the acceptable range
+        var totalDelay = Math.Max(0, baseDelay + jitter - jitterRange / 2);
+
+        // Ensure the delay is within the acceptable range for Task.Delay
+        return Math.Min(totalDelay, int.MaxValue);
+    }
+
+    private int GetJitterRange()
+    {
+        // Dynamically determine the jitter range
+        var hour = DateTime.Now.Hour;
+        return hour >= 8 && hour <= 18 ? 10000 : 5000; // Peak hours have a larger range
     }
 }
