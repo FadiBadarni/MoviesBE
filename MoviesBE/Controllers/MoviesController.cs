@@ -11,27 +11,27 @@ namespace MoviesBE.Controllers;
 public class MoviesController : ControllerBase
 {
     private readonly IMovieRepository _movieRepository;
-    private readonly TmdbService _tmdbService;
-    private readonly VideoService _videoService;
+    private readonly MovieDataService _movieDataService;
+    private readonly MovieVideoOrganizerService _movieVideoOrganizerService;
 
-    public MoviesController(TmdbService tmdbService, IMovieRepository movieRepository, VideoService videoService)
+    public MoviesController(MovieDataService movieDataService, IMovieRepository movieRepository, MovieVideoOrganizerService movieVideoOrganizerService)
     {
-        _tmdbService = tmdbService;
+        _movieDataService = movieDataService;
         _movieRepository = movieRepository;
-        _videoService = videoService;
+        _movieVideoOrganizerService = movieVideoOrganizerService;
     }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<Movie>> GetMovie(int id)
     {
-        var movie = await _tmdbService.GetMovieAsync(id);
+        var movie = await _movieDataService.GetMovieAsync(id);
         return Ok(movie);
     }
 
     [HttpGet("popular")]
     public async Task<ActionResult<List<Movie>>> GetPopularMovies()
     {
-        var movies = await _tmdbService.GetPopularMoviesAndSaveAsync();
+        var movies = await _movieDataService.GetPopularMoviesAndSaveAsync();
         return Ok(movies);
     }
 
@@ -46,7 +46,7 @@ public class MoviesController : ControllerBase
     [HttpGet("top-rated")]
     public async Task<ActionResult<List<Movie>>> GetTopRatedMovies()
     {
-        var movies = await _tmdbService.GetTopRatedMoviesAndSaveAsync();
+        var movies = await _movieDataService.GetTopRatedMoviesAndSaveAsync();
         return Ok(movies);
     }
 

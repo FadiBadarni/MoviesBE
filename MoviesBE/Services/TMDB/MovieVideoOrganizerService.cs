@@ -2,7 +2,7 @@
 
 namespace MoviesBE.Services.TMDB;
 
-public class VideoService
+public class MovieVideoOrganizerService
 {
     public List<MovieVideo> OrganizeMovieVideos(List<MovieVideo> videos)
     {

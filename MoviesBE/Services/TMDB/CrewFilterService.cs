@@ -2,7 +2,7 @@
 
 namespace MoviesBE.Services.TMDB;
 
-public class CreditsService
+public class CrewFilterService
 {
     public Credits ProcessCredits(Credits credits)
     {

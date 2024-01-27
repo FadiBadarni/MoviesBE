@@ -6,19 +6,19 @@ namespace MoviesBE.Services.TMDB;
 public class TmdbApiService
 {
     private readonly string _baseUrl;
-    private readonly CreditsService _creditsService;
+    private readonly CrewFilterService _crewFilterService;
     private readonly HttpService _httpService;
     private readonly MovieBackdropService _movieBackdropService;
-    private readonly VideoService _videoService;
+    private readonly MovieVideoOrganizerService _movieVideoOrganizerService;
 
     public TmdbApiService(HttpService httpService, IConfiguration configuration,
-        MovieBackdropService movieBackdropService, VideoService videoService, CreditsService creditsService)
+        MovieBackdropService movieBackdropService, MovieVideoOrganizerService movieVideoOrganizerService, CrewFilterService crewFilterService)
     {
         _httpService = httpService;
         _baseUrl = configuration["TMDB:BaseUrl"] ?? throw new InvalidOperationException("Base URL is not configured.");
         _movieBackdropService = movieBackdropService;
-        _videoService = videoService;
-        _creditsService = creditsService;
+        _movieVideoOrganizerService = movieVideoOrganizerService;
+        _crewFilterService = crewFilterService;
     }
 
     public async Task<Movie?> FetchMovieFromTmdbAsync(int movieId)
@@ -37,7 +37,7 @@ public class TmdbApiService
 
         // Fetch and set videos
         var videos = await FetchMovieVideosAsync(movieId);
-        movieResponse.Trailers = _videoService.OrganizeMovieVideos(videos);
+        movieResponse.Trailers = _movieVideoOrganizerService.OrganizeMovieVideos(videos);
 
         // Fetch and set credits
         var credits = await FetchMovieCreditsAsync(movieId);
@@ -101,7 +101,7 @@ public class TmdbApiService
             throw new InvalidOperationException($"No credits data returned for movie ID {movieId}.");
         }
 
-        return _creditsService.ProcessCredits(creditsResponse);
+        return _crewFilterService.ProcessCredits(creditsResponse);
     }
 
     public async Task<List<Movie>> GetTopRatedMoviesAsync()

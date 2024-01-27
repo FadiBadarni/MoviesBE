@@ -4,13 +4,13 @@ using MoviesBE.Services.IMDB;
 
 namespace MoviesBE.Services.TMDB;
 
-public class TmdbService
+public class MovieDataService
 {
     private readonly IMDbScrapingService _imDbScrapingService;
     private readonly IMovieRepository _movieRepository;
     private readonly TmdbApiService _tmdbApiService;
 
-    public TmdbService(TmdbApiService tmdbApiService, IMovieRepository movieRepository,
+    public MovieDataService(TmdbApiService tmdbApiService, IMovieRepository movieRepository,
         IMDbScrapingService imDbScrapingService)
     {
         _tmdbApiService = tmdbApiService;
