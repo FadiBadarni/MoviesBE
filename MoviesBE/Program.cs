@@ -5,6 +5,7 @@ using MoviesBE.Services;
 using MoviesBE.Services.Database;
 using MoviesBE.Services.Factories;
 using MoviesBE.Services.IMDB;
+using MoviesBE.Services.RT;
 using MoviesBE.Services.TMDB;
 using Neo4j.Driver;
 
@@ -31,12 +32,15 @@ builder.Services.AddScoped<ICreditsRepository, CreditsRepository>();
 
 builder.Services.AddScoped<IRatingRepository, RatingRepository>();
 builder.Services.AddSingleton<RatingRepositoryFactory>();
+builder.Services.AddSingleton<MovieRepositoryFactory>();
 
 builder.Services.AddHostedService<IMDbRatingUpdateService>();
 builder.Services.AddSingleton<IMDbScrapingServiceFactory>();
 builder.Services.AddScoped<IMDbScrapingService>();
-builder.Services.AddSingleton<MovieRepositoryFactory>();
 
+builder.Services.AddHostedService<RTRatingUpdateService>();
+builder.Services.AddSingleton<RTScrapingServiceFactory>();
+builder.Services.AddScoped<RTScrapingService>();
 
 // Configure logging
 builder.Logging.AddConsole();
