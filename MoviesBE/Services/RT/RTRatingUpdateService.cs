@@ -1,10 +1,10 @@
 ﻿using MoviesBE.Entities;
+using MoviesBE.Exceptions;
 using MoviesBE.Services.Common;
 using MoviesBE.Services.Factories;
-using MoviesBE.Services.RT;
 using MoviesBE.Utilities.Scrape;
 
-namespace MoviesBE.Services.IMDB;
+namespace MoviesBE.Services.RT;
 
 public class RTRatingUpdateService : BaseHostedService
 {
@@ -59,7 +59,8 @@ public class RTRatingUpdateService : BaseHostedService
                 try
                 {
                     var rtScrapingService = _rtScrapingServiceFactory.Create();
-                    var rating = await rtScrapingService.GetRottenTomatoesRatingAsync(formattedTitle);
+                    var year = movie.ReleaseDate?.Length >= 4 ? movie.ReleaseDate.Substring(0, 4) : null;
+                    var rating = await rtScrapingService.GetRottenTomatoesRatingAsync(formattedTitle, year);
 
                     if (rating > 0)
                     {
@@ -73,6 +74,10 @@ public class RTRatingUpdateService : BaseHostedService
                     {
                         Logger.LogWarning($"No valid RT rating found for movie ID {movie.Id}.");
                     }
+                }
+                catch (ResourceNotFoundException ex)
+                {
+                    Logger.LogWarning(ex, $"Rotten Tomatoes page not found for movie ID {movie.Id}.");
                 }
                 catch (OperationCanceledException)
                 {
