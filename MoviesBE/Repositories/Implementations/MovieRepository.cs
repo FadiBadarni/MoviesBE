@@ -10,17 +10,20 @@ namespace MoviesBE.Repositories.Implementations;
 public class MovieRepository : IMovieRepository
 {
     private readonly ICreditsRepository _creditsRepository;
+    private readonly ILogger<MovieRepository> _logger;
     private readonly IDriver _neo4JDriver;
     private readonly PopularityThresholdService _popularityThresholdService;
     private readonly RatingThresholdService _ratingThresholdService;
 
     public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
-        RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService)
+        RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
+        ILogger<MovieRepository> logger)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
         _ratingThresholdService = ratingThresholdService;
         _popularityThresholdService = popularityThresholdService;
+        _logger = logger;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -239,21 +242,31 @@ public class MovieRepository : IMovieRepository
         {
             var result = await session.ExecuteReadAsync(async tx =>
             {
+                _logger.LogInformation("Fetching movies without IMDb ratings.");
                 var cursor = await tx.RunAsync(
                     @"MATCH (m:Movie)
-                  OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'IMDb'})
-                  WHERE r IS NULL OR rating.score = 0
-                  RETURN m");
+                              OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'IMDb'})
+                              WITH m, rating
+                              WHERE rating IS NULL OR rating.score = 0
+                              RETURN m");
 
                 while (await cursor.FetchAsync())
                 {
                     var movieNode = cursor.Current["m"].As<INode>();
                     var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
                     moviesToUpdate.Add(movie);
+                    _logger.LogInformation($"Added movie with ID {movie.Id} to update list.");
                 }
 
                 return moviesToUpdate;
             });
+
+            _logger.LogInformation($"Total movies fetched for update: {moviesToUpdate.Count}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while fetching movies without IMDb ratings.");
+            throw;
         }
         finally
         {
@@ -262,6 +275,7 @@ public class MovieRepository : IMovieRepository
 
         return moviesToUpdate;
     }
+
 
     private static async Task SaveMovieNodeAsync(Movie movie, IAsyncQueryRunner tx)
     {

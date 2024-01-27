@@ -36,7 +36,7 @@ public class IMDbRatingUpdateService : BaseHostedService
         {
             var movieRepository = _movieRepositoryFactory.Create();
             var movies = await movieRepository.GetMoviesWithoutIMDbRatingAsync();
-            var delayConfig = Configuration.GetValue<int>("IMDbScraper:DelayMilliseconds");
+            var delayConfig = Configuration.GetValue<int>("IMDbUpdate:DelayMilliseconds");
 
             foreach (var movie in movies)
             {
@@ -57,8 +57,7 @@ public class IMDbRatingUpdateService : BaseHostedService
                     var imdbScrapingService = _imdbScrapingServiceFactory.Create();
                     var rating = await imdbScrapingService.GetIMDbRatingAsync(movie.ImdbId);
 
-                    // Update the rating if a valid value is returned, or if the existing rating is 0
-                    if (rating > 0 || (rating == 0 && movie.Ratings.Any(r => r.Provider == "IMDb" && r.Score == 0)))
+                    if (rating > 0)
                     {
                         var ratingRepository = _ratingRepositoryFactory.Create();
                         await ratingRepository.UpdateMovieRatingsAsync(movie.Id,
@@ -83,6 +82,7 @@ public class IMDbRatingUpdateService : BaseHostedService
             }
         }, StoppingToken).ConfigureAwait(false);
     }
+
 
     protected override TimeSpan GetInterval()
     {

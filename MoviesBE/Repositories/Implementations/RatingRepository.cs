@@ -21,20 +21,20 @@ public class RatingRepository : IRatingRepository
 
     public async Task SaveMovieRatingsAsync(int movieId, List<Rating> ratings, IAsyncQueryRunner tx)
     {
-        // First, remove existing ratings for this movie.
-        await tx.RunAsync(
-            @"MATCH (m:Movie {id: $movieId})-[r:HAS_RATING]->(rating:Rating)
-          DELETE r",
-            new { movieId });
-
-        // Then, create a new rating node for each rating and create a relationship with the movie.
         foreach (var rating in ratings)
-            await tx.RunAsync(
-                @"MATCH (m:Movie {id: $movieId})
-              MERGE (r:Rating {provider: $provider, movieId: $movieId})
-              ON CREATE SET r.score = $score
-              ON MATCH SET r.score = $score
-              MERGE (m)-[:HAS_RATING]->(r)",
-                new { provider = rating.Provider, score = rating.Score, movieId });
+        {
+            var query = @"
+                            MATCH (m:Movie {id: $movieId})
+                            MERGE (r:Rating {provider: $provider, movieId: $movieId})
+                            ON CREATE SET r.score = $score
+                            ON MATCH SET r.score = $score
+                            MERGE (m)-[:HAS_RATING]->(r)";
+            await tx.RunAsync(query, new
+            {
+                movieId,
+                provider = rating.Provider,
+                score = rating.Score
+            });
+        }
     }
 }
