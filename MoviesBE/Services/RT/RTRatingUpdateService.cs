@@ -63,9 +63,11 @@ public class RTRatingUpdateService : BaseHostedService
 
                     if (rating > 0)
                     {
+                        var normalizedRating = rating / 10;
+
                         var ratingRepository = _ratingRepositoryFactory.Create();
                         await ratingRepository.UpdateMovieRatingsAsync(movie.Id,
-                            new List<Rating> { new() { Provider = "Rotten Tomatoes", Score = rating } });
+                            new List<Rating> { new() { Provider = "Rotten Tomatoes", Score = normalizedRating } });
                     }
                     else
                     {

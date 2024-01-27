@@ -214,13 +214,14 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie)
-                        WHERE m.voteCount >= $minimumVotesThreshold
-                        OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
-                        WITH m, r
-                        WHERE r IS NULL OR (r.provider = 'IMDb' AND r.score >= $ratingThreshold)
-                        RETURN m, COLLECT(r) AS Ratings
-                        ORDER BY m.voteAverage DESC, m.voteCount DESC
-                        ",
+                          WHERE m.voteCount >= $minimumVotesThreshold
+                          OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
+                          WITH m, r
+                          WHERE r IS NULL OR 
+                                (r.provider = 'IMDb' AND r.score >= $ratingThreshold) OR 
+                                (r.provider = 'Rotten Tomatoes' AND r.score >= $ratingThreshold)
+                          RETURN m, COLLECT(r) AS Ratings
+                          ORDER BY m.voteAverage DESC, m.voteCount DESC",
                 new { ratingThreshold, minimumVotesThreshold });
 
             var records = await cursor.ToListAsync();
@@ -242,85 +243,65 @@ public class MovieRepository : IMovieRepository
     {
         var moviesToUpdate = new List<Movie>();
         await using var session = _neo4JDriver.AsyncSession();
-        try
+
+        await session.ExecuteReadAsync(async tx =>
         {
-            var result = await session.ExecuteReadAsync(async tx =>
+            _logger.LogInformation("Fetching movies without IMDb ratings.");
+            var cursor = await tx.RunAsync(
+                @"MATCH (m:Movie)
+                      WHERE m.imdbId IS NOT NULL
+                      OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'IMDb'})
+                      WITH m, rating
+                      WHERE rating IS NULL OR rating.score = 0
+                      RETURN m");
+
+            while (await cursor.FetchAsync())
             {
-                _logger.LogInformation("Fetching movies without IMDb ratings.");
-                var cursor = await tx.RunAsync(
-                    @"MATCH (m:Movie)
-                              WHERE m.imdbId IS NOT NULL
-                              OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'IMDb'})
-                              WITH m, rating
-                              WHERE rating IS NULL OR rating.score = 0
-                              RETURN m");
+                var movieNode = cursor.Current["m"].As<INode>();
+                var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
+                moviesToUpdate.Add(movie);
+            }
 
+            return moviesToUpdate;
+        });
 
-                while (await cursor.FetchAsync())
-                {
-                    var movieNode = cursor.Current["m"].As<INode>();
-                    var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
-                    moviesToUpdate.Add(movie);
-                    _logger.LogInformation($"Added movie with ID {movie.Id} to update list.");
-                }
+        _logger.LogInformation($"Total movies fetched for update: {moviesToUpdate.Count}");
 
-                return moviesToUpdate;
-            });
-
-            _logger.LogInformation($"Total movies fetched for update: {moviesToUpdate.Count}");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while fetching movies without IMDb ratings.");
-            throw;
-        }
-        finally
-        {
-            await session.CloseAsync();
-        }
+        await session.CloseAsync();
 
         return moviesToUpdate;
     }
+
 
     public async Task<List<Movie>> GetMoviesWithoutRTRatingAsync()
     {
         var moviesToUpdate = new List<Movie>();
         await using var session = _neo4JDriver.AsyncSession();
-        try
+
+        await session.ExecuteReadAsync(async tx =>
         {
-            var result = await session.ExecuteReadAsync(async tx =>
-            {
-                _logger.LogInformation("Fetching movies without Rotten Tomatoes ratings.");
-                var cursor = await tx.RunAsync(
-                    @"MATCH (m:Movie)
+            _logger.LogInformation("Fetching movies without Rotten Tomatoes ratings.");
+            var cursor = await tx.RunAsync(
+                @"MATCH (m:Movie)
                   WHERE m.title IS NOT NULL
                   OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'Rotten Tomatoes'})
                   WITH m, rating
                   WHERE rating IS NULL OR rating.score = 0
                   RETURN m");
 
-                while (await cursor.FetchAsync())
-                {
-                    var movieNode = cursor.Current["m"].As<INode>();
-                    var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
-                    moviesToUpdate.Add(movie);
-                    _logger.LogInformation($"Added movie with ID {movie.Id} to update list.");
-                }
+            while (await cursor.FetchAsync())
+            {
+                var movieNode = cursor.Current["m"].As<INode>();
+                var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
+                moviesToUpdate.Add(movie);
+            }
 
-                return moviesToUpdate;
-            });
+            return moviesToUpdate;
+        });
 
-            _logger.LogInformation($"Total movies fetched for update: {moviesToUpdate.Count}");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred while fetching movies without Rotten Tomatoes ratings.");
-            throw;
-        }
-        finally
-        {
-            await session.CloseAsync();
-        }
+        _logger.LogInformation($"Total movies fetched for update: {moviesToUpdate.Count}");
+
+        await session.CloseAsync();
 
         return moviesToUpdate;
     }
