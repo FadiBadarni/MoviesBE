@@ -5,20 +5,27 @@ namespace MoviesBE.Utilities.Conversions;
 
 public static class TopRatedMovieNodeConverter
 {
-    public static TopRatedMovie ConvertNodeToTopRatedMovie(IEntity node)
+    public static TopRatedMovie ConvertNodeToTopRatedMovie(IEntity movieNode, IEnumerable<INode> ratingNodes)
     {
-        return new TopRatedMovie
+        var topRatedMovie = new TopRatedMovie
         {
-            Id = node.Properties.ContainsKey("id") ? node.Properties["id"].As<int>() : 0,
-            Title = node.Properties.ContainsKey("title") ? node.Properties["title"].As<string>() : string.Empty,
-            PosterPath = node.Properties.ContainsKey("posterPath")
-                ? node.Properties["posterPath"].As<string>()
+            Id = movieNode.Properties.ContainsKey("id") ? movieNode.Properties["id"].As<int>() : 0,
+            Title = movieNode.Properties.ContainsKey("title")
+                ? movieNode.Properties["title"].As<string>()
                 : string.Empty,
-            ReleaseDate = node.Properties.ContainsKey("releaseDate")
-                ? node.Properties["releaseDate"].As<string>()
+            PosterPath = movieNode.Properties.ContainsKey("posterPath")
+                ? movieNode.Properties["posterPath"].As<string>()
                 : string.Empty,
-            Overview =
-                node.Properties.ContainsKey("overview") ? node.Properties["overview"].As<string>() : string.Empty
+            ReleaseDate = movieNode.Properties.ContainsKey("releaseDate")
+                ? movieNode.Properties["releaseDate"].As<string>()
+                : string.Empty,
+            Overview = movieNode.Properties.ContainsKey("overview")
+                ? movieNode.Properties["overview"].As<string>()
+                : string.Empty
         };
+
+        topRatedMovie.Ratings = ratingNodes.Select(RatingNodeConverter.ConvertNodeToRating).ToList();
+
+        return topRatedMovie;
     }
 }

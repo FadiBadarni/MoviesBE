@@ -210,9 +210,10 @@ public class MovieRepository : IMovieRepository
         var result = await session.ExecuteReadAsync(async tx =>
         {
             var cursor = await tx.RunAsync(
-                @"MATCH (m:Movie)
+                @"MATCH (m:Movie)-[:HAS_RATING]->(r:Rating)
           WHERE m.voteAverage >= $ratingThreshold AND m.voteCount >= $minimumVotesThreshold
-          RETURN m ORDER BY m.voteAverage DESC",
+          RETURN m, COLLECT(r) AS Ratings
+          ORDER BY m.voteAverage DESC",
                 new { ratingThreshold, minimumVotesThreshold });
 
             var records = await cursor.ToListAsync();
@@ -222,7 +223,8 @@ public class MovieRepository : IMovieRepository
         foreach (var record in result)
         {
             var movieNode = record["m"].As<INode>();
-            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode);
+            var ratingNodes = record["Ratings"].As<List<INode>>();
+            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes);
             movies.Add(movie);
         }
 
