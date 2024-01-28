@@ -20,38 +20,38 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Movie>> GetMovie(int id)
+    public async Task<ActionResult<Movie>> GetMovieById(int id)
     {
-        var movie = await _movieDataService.GetMovieAsync(id);
+        var movie = await _movieDataService.GetMovieByIdAsync(id);
         return Ok(movie);
     }
 
+    [HttpGet("tmdb/popular")]
+    public async Task<ActionResult<List<Movie>>> GetTmdbPopularMovies()
+    {
+        var movies = await _movieDataService.GetTMDBPopularAndSave();
+        return Ok(movies);
+    }
+
     [HttpGet("popular")]
-    public async Task<ActionResult<List<Movie>>> GetPopularMovies()
+    public async Task<ActionResult<List<PopularMovie>>> GetPopularMovies()
     {
-        var movies = await _movieDataService.GetPopularMoviesAndSaveAsync();
+        var movies = await _movieRepository.GetPopularMoviesAsync();
         return Ok(movies);
     }
 
-    [HttpGet("cached-popular")]
-    public async Task<ActionResult<List<PopularMovie>>> GetCachedPopularMovies()
+
+    [HttpGet("tmdb/top-rated")]
+    public async Task<ActionResult<List<Movie>>> GetTMDBTopRatedMovies()
     {
-        var movies = await _movieRepository.GetCachedPopularMoviesAsync();
+        var movies = await _movieDataService.GetTMDBTopRatedAndSave();
         return Ok(movies);
     }
-
 
     [HttpGet("top-rated")]
-    public async Task<ActionResult<List<Movie>>> GetTopRatedMovies()
+    public async Task<ActionResult<List<TopRatedMovie>>> GetTopRatedMovies()
     {
-        var movies = await _movieDataService.GetTopRatedMoviesAndSaveAsync();
-        return Ok(movies);
-    }
-
-    [HttpGet("cached-top-rated")]
-    public async Task<ActionResult<List<TopRatedMovie>>> GetCachedTopRatedMovies()
-    {
-        var movies = await _movieRepository.GetCachedTopRatedMoviesAsync();
+        var movies = await _movieRepository.GetTopRatedMoviesAsync();
         return Ok(movies);
     }
 }

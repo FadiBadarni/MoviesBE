@@ -9,9 +9,9 @@ public interface IMovieRepository
 
     Task<Movie?> GetMovieByIdAsync(int movieId);
 
-    Task<List<PopularMovie>> GetCachedPopularMoviesAsync();
+    Task<List<PopularMovie>> GetPopularMoviesAsync();
 
-    Task<List<TopRatedMovie>> GetCachedTopRatedMoviesAsync();
+    Task<List<TopRatedMovie>> GetTopRatedMoviesAsync();
 
     Task<List<Movie>> GetMoviesWithoutIMDbRatingAsync();
 

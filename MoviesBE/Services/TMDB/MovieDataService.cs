@@ -14,7 +14,7 @@ public class MovieDataService
         _movieRepository = movieRepository;
     }
 
-    public async Task<Movie> GetMovieAsync(int movieId)
+    public async Task<Movie> GetMovieByIdAsync(int movieId)
     {
         var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId);
 
@@ -34,7 +34,7 @@ public class MovieDataService
     }
 
 
-    public async Task<List<Movie>> GetPopularMoviesAndSaveAsync()
+    public async Task<List<Movie>> GetTMDBPopularAndSave()
     {
         var popularMovies = await _tmdbApiService.GetPopularMoviesAsync();
 
@@ -43,7 +43,7 @@ public class MovieDataService
         return popularMovies;
     }
 
-    public async Task<List<Movie>> GetTopRatedMoviesAndSaveAsync()
+    public async Task<List<Movie>> GetTMDBTopRatedAndSave()
     {
         var topRatedMovies = await _tmdbApiService.GetTopRatedMoviesAsync();
 

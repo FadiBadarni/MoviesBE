@@ -176,7 +176,7 @@ public class MovieRepository : IMovieRepository
     }
 
 
-    public async Task<List<PopularMovie>> GetCachedPopularMoviesAsync()
+    public async Task<List<PopularMovie>> GetPopularMoviesAsync()
     {
         var movies = new List<PopularMovie>();
         await using var session = _neo4JDriver.AsyncSession();
@@ -227,7 +227,7 @@ public class MovieRepository : IMovieRepository
         return movies;
     }
 
-    public async Task<List<TopRatedMovie>> GetCachedTopRatedMoviesAsync()
+    public async Task<List<TopRatedMovie>> GetTopRatedMoviesAsync()
     {
         var movies = new List<TopRatedMovie>();
         await using var session = _neo4JDriver.AsyncSession();

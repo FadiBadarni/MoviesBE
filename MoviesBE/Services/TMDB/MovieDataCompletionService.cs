@@ -46,7 +46,7 @@ public class MovieDataCompletionService : BaseHostedService
 
                         if (!movieDataService.IsMovieDataComplete(movie))
                         {
-                            await movieDataService.GetMovieAsync(movie.Id);
+                            await movieDataService.GetMovieByIdAsync(movie.Id);
                         }
                     }
                 }
