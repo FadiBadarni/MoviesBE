@@ -175,97 +175,24 @@ public class MovieRepository : IMovieRepository
         });
     }
 
-
     public async Task<List<PopularMovie>> GetPopularMoviesAsync()
     {
-        var movies = new List<PopularMovie>();
-        await using var session = _neo4JDriver.AsyncSession();
+        return await FetchPopularMoviesAsync();
+    }
 
-        var percentile = 90;
-        var popularityThreshold = await _popularityThresholdService.GetPopularityThreshold(session, percentile);
-
-        var result = await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(
-                @"MATCH (m:Movie)
-                      WHERE m.popularity >= $popularityThreshold
-                      OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre) // Fetch genres
-                      RETURN m, COLLECT(g) AS Genres",
-                new { popularityThreshold });
-
-            var records = await cursor.ToListAsync();
-            return records;
-        });
-
-        while (result.Count < 10 && percentile >= 50)
-        {
-            percentile -= 10; // Decrease percentile
-            popularityThreshold = await _popularityThresholdService.GetPopularityThreshold(session, percentile);
-
-            result = await session.ExecuteReadAsync(async tx =>
-            {
-                var cursor = await tx.RunAsync(
-                    @"MATCH (m:Movie)
-                          WHERE m.popularity >= $popularityThreshold
-                          OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre) // Fetch genres
-                          RETURN m, COLLECT(g) AS Genres",
-                    new { popularityThreshold });
-
-                return await cursor.ToListAsync();
-            });
-        }
-
-        foreach (var record in result)
-        {
-            var movieNode = record["m"].As<INode>();
-            var genreNodes = record["Genres"].As<List<INode>>();
-            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode, genreNodes);
-            movies.Add(movie);
-        }
-
-
-        return movies;
+    public async Task<List<PopularMovie>> GetLimitedPopularMoviesAsync(int limit = 3)
+    {
+        return await FetchPopularMoviesAsync(limit);
     }
 
     public async Task<List<TopRatedMovie>> GetTopRatedMoviesAsync()
     {
-        var movies = new List<TopRatedMovie>();
-        await using var session = _neo4JDriver.AsyncSession();
+        return await FetchTopRatedMoviesAsync();
+    }
 
-        // Determine the rating threshold dynamically
-        var (ratingThreshold, minimumVotesThreshold) = await _ratingThresholdService.GetThresholds(session);
-
-        var result = await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(
-                @"MATCH (m:Movie)
-                          WHERE m.voteCount >= $minimumVotesThreshold
-                          OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
-                          OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
-                          WITH m, r, COLLECT(g) AS Genres
-                          WHERE r IS NULL OR 
-                                (r.provider = 'IMDb' AND r.score >= $ratingThreshold) OR 
-                                (r.provider = 'Rotten Tomatoes' AND r.score >= $ratingThreshold)
-                          RETURN m, COLLECT(r) AS Ratings, Genres
-                          ORDER BY m.voteAverage DESC, m.voteCount DESC",
-                new { ratingThreshold, minimumVotesThreshold });
-
-            var records = await cursor.ToListAsync();
-            return records;
-        });
-
-        foreach (var record in result)
-        {
-            var movieNode = record["m"].As<INode>();
-            var ratingNodes = record["Ratings"].As<List<INode>>();
-            var genreNodes = record["Genres"].As<List<INode>>();
-
-            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes, genreNodes);
-            movies.Add(movie);
-        }
-
-
-        return movies;
+    public async Task<List<TopRatedMovie>> GetLimitedTopRatedMoviesAsync(int limit = 3)
+    {
+        return await FetchTopRatedMoviesAsync(limit);
     }
 
     public async Task<List<Movie>> GetMoviesWithoutIMDbRatingAsync()
@@ -363,6 +290,84 @@ public class MovieRepository : IMovieRepository
                 movies.Add(movie);
             }
         });
+
+        return movies;
+    }
+
+    private async Task<List<TopRatedMovie>> FetchTopRatedMoviesAsync(int? limit = null)
+    {
+        var movies = new List<TopRatedMovie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var (ratingThreshold, minimumVotesThreshold) = await _ratingThresholdService.GetThresholds(session);
+
+        var query = @"MATCH (m:Movie)
+                      WHERE m.voteCount >= $minimumVotesThreshold
+                      OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
+                      OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                      WITH m, r, COLLECT(g) AS Genres
+                      WHERE r IS NULL OR 
+                            (r.provider = 'IMDb' AND r.score >= $ratingThreshold) OR 
+                            (r.provider = 'Rotten Tomatoes' AND r.score >= $ratingThreshold)
+                      RETURN m, COLLECT(r) AS Ratings, Genres";
+
+        if (limit.HasValue)
+        {
+            query += " ORDER BY m.voteAverage DESC, m.voteCount DESC LIMIT $limit";
+        }
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(query, new { ratingThreshold, minimumVotesThreshold, limit });
+            return await cursor.ToListAsync();
+        });
+
+        // Populate movies list from the query result
+        foreach (var record in result)
+        {
+            var movieNode = record["m"].As<INode>();
+            var ratingNodes = record["Ratings"].As<List<INode>>();
+            var genreNodes = record["Genres"].As<List<INode>>();
+
+            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes, genreNodes);
+            movies.Add(movie);
+        }
+
+        return movies;
+    }
+
+    private async Task<List<PopularMovie>> FetchPopularMoviesAsync(int? limit = null)
+    {
+        var movies = new List<PopularMovie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var percentile = 90;
+        var popularityThreshold = await _popularityThresholdService.GetPopularityThreshold(session, percentile);
+
+        var query = @"MATCH (m:Movie)
+                      WHERE m.popularity >= $popularityThreshold
+                      OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                      RETURN m, COLLECT(g) AS Genres";
+
+        if (limit.HasValue)
+        {
+            query += " ORDER BY m.popularity DESC LIMIT $limit";
+        }
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(query, new { popularityThreshold, limit });
+            return await cursor.ToListAsync();
+        });
+
+        // Populate movies list from the query result
+        foreach (var record in result)
+        {
+            var movieNode = record["m"].As<INode>();
+            var genreNodes = record["Genres"].As<List<INode>>();
+            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode, genreNodes);
+            movies.Add(movie);
+        }
 
         return movies;
     }

@@ -54,4 +54,18 @@ public class MoviesController : ControllerBase
         var movies = await _movieRepository.GetTopRatedMoviesAsync();
         return Ok(movies);
     }
+
+    [HttpGet("popular/limited")]
+    public async Task<ActionResult<List<PopularMovie>>> GetLimitedPopularMovies()
+    {
+        var movies = await _movieDataService.GetLimitedPopularMoviesAsync();
+        return Ok(movies);
+    }
+
+    [HttpGet("top-rated/limited")]
+    public async Task<ActionResult<List<TopRatedMovie>>> GetLimitedTopRatedMovies()
+    {
+        var movies = await _movieDataService.GetLimitedTopRatedMoviesAsync();
+        return Ok(movies);
+    }
 }

@@ -1,10 +1,12 @@
-﻿using MoviesBE.Entities;
+﻿using MoviesBE.DTOs;
+using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
 
 namespace MoviesBE.Services.TMDB;
 
 public class MovieDataService
 {
+    private const int HomePageMovieLimit = 3;
     private readonly IMovieRepository _movieRepository;
     private readonly TmdbApiService _tmdbApiService;
 
@@ -72,5 +74,15 @@ public class MovieDataService
                          movie.Credits.Crew != null && movie.Credits.Crew.Count > 0;
 
         return hasEssentialInfo && hasAdditionalInfo && hasBackdropImages && hasVideos && hasCredits;
+    }
+
+    public async Task<List<PopularMovie>> GetLimitedPopularMoviesAsync()
+    {
+        return await _movieRepository.GetLimitedPopularMoviesAsync(HomePageMovieLimit);
+    }
+
+    public async Task<List<TopRatedMovie>> GetLimitedTopRatedMoviesAsync()
+    {
+        return await _movieRepository.GetLimitedTopRatedMoviesAsync(HomePageMovieLimit);
     }
 }
