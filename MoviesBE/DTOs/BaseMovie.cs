@@ -1,4 +1,6 @@
-﻿namespace MoviesBE.DTOs;
+﻿using MoviesBE.Entities;
+
+namespace MoviesBE.DTOs;
 
 public class BaseMovie
 {
@@ -7,4 +9,6 @@ public class BaseMovie
     public string? PosterPath { get; set; }
     public string? ReleaseDate { get; set; }
     public string? Overview { get; set; }
+    public int Runtime { get; set; }
+    public List<Genre>? Genres { get; set; }
 }
