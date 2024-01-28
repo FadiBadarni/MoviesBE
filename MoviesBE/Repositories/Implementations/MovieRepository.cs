@@ -188,8 +188,9 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie)
-              WHERE m.popularity >= $popularityThreshold
-              RETURN m",
+                      WHERE m.popularity >= $popularityThreshold
+                      OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre) // Fetch genres
+                      RETURN m, COLLECT(g) AS Genres",
                 new { popularityThreshold });
 
             var records = await cursor.ToListAsync();
@@ -205,8 +206,9 @@ public class MovieRepository : IMovieRepository
             {
                 var cursor = await tx.RunAsync(
                     @"MATCH (m:Movie)
-                  WHERE m.popularity >= $popularityThreshold
-                  RETURN m",
+                          WHERE m.popularity >= $popularityThreshold
+                          OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre) // Fetch genres
+                          RETURN m, COLLECT(g) AS Genres",
                     new { popularityThreshold });
 
                 return await cursor.ToListAsync();
@@ -216,9 +218,11 @@ public class MovieRepository : IMovieRepository
         foreach (var record in result)
         {
             var movieNode = record["m"].As<INode>();
-            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode);
+            var genreNodes = record["Genres"].As<List<INode>>();
+            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode, genreNodes);
             movies.Add(movie);
         }
+
 
         return movies;
     }
