@@ -14,12 +14,14 @@ public class MovieRepository : IMovieRepository
     private readonly ILogger<MovieRepository> _logger;
     private readonly IDriver _neo4JDriver;
     private readonly IPCompanyRepository _pCompanyRepository;
+    private readonly IPCountryRepository _pCountryRepository;
     private readonly PopularityThresholdService _popularityThresholdService;
     private readonly RatingThresholdService _ratingThresholdService;
 
     public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
-        ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository)
+        ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository,
+        IPCountryRepository pCountryRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
@@ -28,6 +30,7 @@ public class MovieRepository : IMovieRepository
         _logger = logger;
         _genreRepository = genreRepository;
         _pCompanyRepository = pCompanyRepository;
+        _pCountryRepository = pCountryRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -50,7 +53,7 @@ public class MovieRepository : IMovieRepository
 
                 if (movie.ProductionCountries != null)
                 {
-                    await SaveProductionCountriesAsync(movie, tx);
+                    await _pCountryRepository.SaveProductionCountriesAsync(movie, tx);
                 }
 
                 if (movie.SpokenLanguages != null)
@@ -441,30 +444,7 @@ public class MovieRepository : IMovieRepository
             });
     }
 
-    private static async Task SaveProductionCountriesAsync(Movie movie, IAsyncQueryRunner tx)
-    {
-        if (movie.ProductionCountries == null)
-        {
-            return;
-        }
 
-        // First, detach all existing production country relationships from this movie.
-        await tx.RunAsync(
-            @"MATCH (m:Movie {id: $movieId})-[r:PRODUCED_IN]->(c:Country)
-          DELETE r",
-            new { movieId = movie.Id });
-
-        // Then, merge each production country and create a relationship with the movie.
-        foreach (var country in movie.ProductionCountries)
-            await tx.RunAsync(
-                @"MERGE (c:Country {iso31661: $iso31661})
-              ON CREATE SET c.name = $name
-              ON MATCH SET c.name = $name
-              WITH c
-              MATCH (m:Movie {id: $movieId})
-              MERGE (m)-[:PRODUCED_IN]->(c)",
-                new { iso31661 = country.Iso31661, name = country.Name, movieId = movie.Id });
-    }
 
 
     private static async Task SaveSpokenLanguagesAsync(Movie movie, IAsyncQueryRunner tx)
