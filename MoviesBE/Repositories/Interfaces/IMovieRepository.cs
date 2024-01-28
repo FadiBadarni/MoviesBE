@@ -9,7 +9,7 @@ public interface IMovieRepository
 
     Task<Movie?> GetMovieByIdAsync(int movieId);
 
-    Task<List<PopularMovie>> GetPopularMoviesAsync();
+    Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize);
 
     Task<List<TopRatedMovie>> GetTopRatedMoviesAsync();
 

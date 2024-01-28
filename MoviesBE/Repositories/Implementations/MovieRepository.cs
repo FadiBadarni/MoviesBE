@@ -175,10 +175,6 @@ public class MovieRepository : IMovieRepository
         });
     }
 
-    public async Task<List<PopularMovie>> GetPopularMoviesAsync()
-    {
-        return await FetchPopularMoviesAsync();
-    }
 
     public async Task<List<PopularMovie>> GetLimitedPopularMoviesAsync(int limit = 3)
     {
@@ -292,6 +288,49 @@ public class MovieRepository : IMovieRepository
         });
 
         return movies;
+    }
+
+    public async Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize)
+    {
+        var movies = new List<PopularMovie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var skip = (page - 1) * pageSize;
+
+        var query = @"MATCH (m:Movie)
+                        OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                        RETURN m, COLLECT(g) AS Genres
+                        ORDER BY m.popularity DESC
+                        SKIP $skip
+                        LIMIT $pageSize";
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(query, new { skip, pageSize });
+            return await cursor.ToListAsync();
+        });
+
+        foreach (var record in result)
+        {
+            var movieNode = record["m"].As<INode>();
+            var genreNodes = record["Genres"].As<List<INode>>();
+            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode, genreNodes);
+            movies.Add(movie);
+        }
+
+        // Query for total count
+        var countQuery = @"MATCH (m:Movie) RETURN count(m) as totalCount";
+        var totalCount = 0;
+        await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(countQuery);
+            if (await cursor.FetchAsync())
+            {
+                totalCount = cursor.Current["totalCount"].As<int>();
+            }
+        });
+
+        return (movies, totalCount);
     }
 
     private async Task<List<TopRatedMovie>> FetchTopRatedMoviesAsync(int? limit = null)

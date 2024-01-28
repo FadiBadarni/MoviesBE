@@ -35,9 +35,9 @@ public class MovieDataService
         return movie;
     }
 
-    public async Task<List<PopularMovie>> GetPopularMoviesAsync()
+    public async Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize)
     {
-        return await _movieRepository.GetPopularMoviesAsync();
+        return await _movieRepository.GetPopularMoviesAsync(page, pageSize);
     }
 
     public async Task<List<TopRatedMovie>> GetTopRatedMoviesAsync()

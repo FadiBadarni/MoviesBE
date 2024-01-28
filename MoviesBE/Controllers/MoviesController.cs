@@ -31,12 +31,12 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet("popular")]
-    public async Task<ActionResult<List<PopularMovie>>> GetPopularMovies()
+    public async Task<ActionResult<List<PopularMovie>>> GetPopularMovies([FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var movies = await _movieDataService.GetPopularMoviesAsync();
-        return Ok(movies);
+        var (movies, totalMovies) = await _movieDataService.GetPopularMoviesAsync(page, pageSize);
+        return Ok(new { movies, totalMovies });
     }
-
 
     [HttpGet("tmdb/top-rated")]
     public async Task<ActionResult<List<Movie>>> GetTMDBTopRatedMovies()
