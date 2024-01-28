@@ -350,42 +350,13 @@ public class MovieRepository : IMovieRepository
 
             while (await cursor.FetchAsync())
             {
-                cursor.Current["m"].As<INode>();
-                var movie = ConvertNodeToMovieWithEssentialDetails(cursor.Current);
+                var movieNode = cursor.Current["m"].As<INode>();
+                var movie = MovieNodeConverter.ConvertNodeToMovieWithEssentialDetails(movieNode);
                 movies.Add(movie);
             }
         });
 
         return movies;
-    }
-
-    private Movie ConvertNodeToMovieWithEssentialDetails(IRecord record)
-    {
-        var movieNode = record["m"].As<INode>();
-        var movie = new Movie
-        {
-            Id = movieNode.Properties["id"].As<int>(),
-            Title = movieNode.Properties["title"].As<string>(),
-            Overview = movieNode.Properties["overview"].As<string>(),
-            ReleaseDate = movieNode.Properties["releaseDate"].As<string>(),
-            PosterPath = movieNode.Properties["posterPath"].As<string>(),
-            Runtime = movieNode.Properties.GetValueOrDefault("runtime", 0).As<int>(),
-            Status = movieNode.Properties.GetValueOrDefault("status", string.Empty).As<string>(),
-            VoteAverage = movieNode.Properties.GetValueOrDefault("voteAverage", 0.0).As<double>(),
-            Genres = record["genres"].As<List<INode>>().Select(GenreNodeConverter.ConvertNodeToGenre).ToList(),
-            Backdrops = record["backdrops"].As<List<INode>>().Select(BackdropNodeConverter.ConvertNodeToBackdrop)
-                .ToList(),
-            Trailers = record["videos"].As<List<INode>>().Select(MovieVideoNodeConverter.ConvertNodeToVideo).ToList(),
-            Credits = new Credits
-            {
-                Cast = record["castMembers"].As<List<INode>>().Select(CreditsNodeConverter.ConvertNodeToCastMember)
-                    .ToList(),
-                Crew = record["crewMembers"].As<List<INode>>().Select(CreditsNodeConverter.ConvertNodeToCrewMember)
-                    .ToList()
-            }
-        };
-
-        return movie;
     }
 
 
