@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MoviesBE.DTOs;
 using MoviesBE.Entities;
-using MoviesBE.Repositories.Interfaces;
 using MoviesBE.Services.TMDB;
 
 namespace MoviesBE.Controllers;
@@ -11,12 +10,10 @@ namespace MoviesBE.Controllers;
 public class MoviesController : ControllerBase
 {
     private readonly MovieDataService _movieDataService;
-    private readonly IMovieRepository _movieRepository;
 
-    public MoviesController(MovieDataService movieDataService, IMovieRepository movieRepository)
+    public MoviesController(MovieDataService movieDataService)
     {
         _movieDataService = movieDataService;
-        _movieRepository = movieRepository;
     }
 
     [HttpGet("{id:int}")]
@@ -36,7 +33,7 @@ public class MoviesController : ControllerBase
     [HttpGet("popular")]
     public async Task<ActionResult<List<PopularMovie>>> GetPopularMovies()
     {
-        var movies = await _movieRepository.GetPopularMoviesAsync();
+        var movies = await _movieDataService.GetPopularMoviesAsync();
         return Ok(movies);
     }
 
@@ -51,7 +48,7 @@ public class MoviesController : ControllerBase
     [HttpGet("top-rated")]
     public async Task<ActionResult<List<TopRatedMovie>>> GetTopRatedMovies()
     {
-        var movies = await _movieRepository.GetTopRatedMoviesAsync();
+        var movies = await _movieDataService.GetTopRatedMoviesAsync();
         return Ok(movies);
     }
 

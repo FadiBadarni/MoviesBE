@@ -35,6 +35,15 @@ public class MovieDataService
         return movie;
     }
 
+    public async Task<List<PopularMovie>> GetPopularMoviesAsync()
+    {
+        return await _movieRepository.GetPopularMoviesAsync();
+    }
+
+    public async Task<List<TopRatedMovie>> GetTopRatedMoviesAsync()
+    {
+        return await _movieRepository.GetTopRatedMoviesAsync();
+    }
 
     public async Task<List<Movie>> GetTMDBPopularAndSave()
     {
