@@ -13,12 +13,13 @@ public class MovieRepository : IMovieRepository
     private readonly IGenreRepository _genreRepository;
     private readonly ILogger<MovieRepository> _logger;
     private readonly IDriver _neo4JDriver;
+    private readonly IPCompanyRepository _pCompanyRepository;
     private readonly PopularityThresholdService _popularityThresholdService;
     private readonly RatingThresholdService _ratingThresholdService;
 
     public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
-        ILogger<MovieRepository> logger, IGenreRepository genreRepository)
+        ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
@@ -26,6 +27,7 @@ public class MovieRepository : IMovieRepository
         _popularityThresholdService = popularityThresholdService;
         _logger = logger;
         _genreRepository = genreRepository;
+        _pCompanyRepository = pCompanyRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -43,7 +45,7 @@ public class MovieRepository : IMovieRepository
 
                 if (movie.ProductionCompanies != null)
                 {
-                    await SaveProductionCompaniesAsync(movie, tx);
+                    await _pCompanyRepository.SaveProductionCompaniesAsync(movie, tx);
                 }
 
                 if (movie.ProductionCountries != null)
@@ -438,36 +440,6 @@ public class MovieRepository : IMovieRepository
                 voteCount = movie.VoteCount
             });
     }
-
-    private static async Task SaveProductionCompaniesAsync(Movie movie, IAsyncQueryRunner tx)
-    {
-        if (movie.ProductionCompanies == null)
-        {
-            return;
-        }
-
-        // First, detach all existing production company relationships from this movie.
-        await tx.RunAsync(
-            @"MATCH (m:Movie {id: $movieId})-[r:PRODUCED_BY]->(c:Company)
-          DELETE r",
-            new { movieId = movie.Id });
-
-        // Then, merge each production company and create a relationship with the movie.
-        foreach (var company in movie.ProductionCompanies)
-            await tx.RunAsync(
-                @"MERGE (c:Company {id: $id})
-              ON CREATE SET c.name = $name, c.logoPath = $logoPath, c.originCountry = $originCountry
-              ON MATCH SET c.name = $name, c.logoPath = $logoPath, c.originCountry = $originCountry
-              WITH c
-              MATCH (m:Movie {id: $movieId})
-              MERGE (m)-[:PRODUCED_BY]->(c)",
-                new
-                {
-                    id = company.Id, name = company.Name, logoPath = company.LogoPath,
-                    originCountry = company.OriginCountry, movieId = movie.Id
-                });
-    }
-
 
     private static async Task SaveProductionCountriesAsync(Movie movie, IAsyncQueryRunner tx)
     {

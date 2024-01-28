@@ -30,6 +30,7 @@ builder.Services.AddSingleton(GraphDatabase.Driver(neo4JConfig["Uri"],
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
 builder.Services.AddScoped<ICreditsRepository, CreditsRepository>();
 builder.Services.AddScoped<IGenreRepository, GenreRepository>();
+builder.Services.AddScoped<IPCompanyRepository, PCompanyRepository>();
 
 builder.Services.AddScoped<IRatingRepository, RatingRepository>();
 builder.Services.AddSingleton<RatingRepositoryFactory>();
