@@ -53,7 +53,7 @@ public class MovieDataService
     }
 
 
-    private static bool IsMovieDataComplete(Movie movie)
+    public bool IsMovieDataComplete(Movie movie)
     {
         var hasEssentialInfo = !string.IsNullOrEmpty(movie.Title) &&
                                !string.IsNullOrEmpty(movie.Overview) &&

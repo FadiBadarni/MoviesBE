@@ -306,6 +306,67 @@ public class MovieRepository : IMovieRepository
         return moviesToUpdate;
     }
 
+    public async Task<List<Movie>> GetAllMoviesAsync()
+    {
+        var movies = new List<Movie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(
+                @"MATCH (m:Movie)
+              OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+              OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
+              OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
+              OPTIONAL MATCH (m)-[:HAS_CAST]->(cast:Cast)
+              OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
+              RETURN m, 
+                     COLLECT(DISTINCT g) as genres, 
+                     COLLECT(DISTINCT b) as backdrops, 
+                     COLLECT(DISTINCT v) as videos,
+                     COLLECT(DISTINCT cast) as castMembers, 
+                     COLLECT(DISTINCT crew) as crewMembers");
+
+            while (await cursor.FetchAsync())
+            {
+                cursor.Current["m"].As<INode>();
+                var movie = ConvertNodeToMovieWithEssentialDetails(cursor.Current);
+                movies.Add(movie);
+            }
+        });
+
+        return movies;
+    }
+
+    private Movie ConvertNodeToMovieWithEssentialDetails(IRecord record)
+    {
+        var movieNode = record["m"].As<INode>();
+        var movie = new Movie
+        {
+            Id = movieNode.Properties["id"].As<int>(),
+            Title = movieNode.Properties["title"].As<string>(),
+            Overview = movieNode.Properties["overview"].As<string>(),
+            ReleaseDate = movieNode.Properties["releaseDate"].As<string>(),
+            PosterPath = movieNode.Properties["posterPath"].As<string>(),
+            Runtime = movieNode.Properties.GetValueOrDefault("runtime", 0).As<int>(),
+            Status = movieNode.Properties.GetValueOrDefault("status", string.Empty).As<string>(),
+            VoteAverage = movieNode.Properties.GetValueOrDefault("voteAverage", 0.0).As<double>(),
+            Genres = record["genres"].As<List<INode>>().Select(GenreNodeConverter.ConvertNodeToGenre).ToList(),
+            Backdrops = record["backdrops"].As<List<INode>>().Select(BackdropNodeConverter.ConvertNodeToBackdrop)
+                .ToList(),
+            Trailers = record["videos"].As<List<INode>>().Select(MovieVideoNodeConverter.ConvertNodeToVideo).ToList(),
+            Credits = new Credits
+            {
+                Cast = record["castMembers"].As<List<INode>>().Select(CreditsNodeConverter.ConvertNodeToCastMember)
+                    .ToList(),
+                Crew = record["crewMembers"].As<List<INode>>().Select(CreditsNodeConverter.ConvertNodeToCrewMember)
+                    .ToList()
+            }
+        };
+
+        return movie;
+    }
+
 
     private static async Task SaveMovieNodeAsync(Movie movie, IAsyncQueryRunner tx)
     {

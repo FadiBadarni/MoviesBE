@@ -16,4 +16,5 @@ public interface IMovieRepository
     Task<List<Movie>> GetMoviesWithoutIMDbRatingAsync();
 
     Task<List<Movie>> GetMoviesWithoutRTRatingAsync();
+    Task<List<Movie>> GetAllMoviesAsync();
 }

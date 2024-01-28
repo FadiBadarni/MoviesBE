@@ -42,6 +42,8 @@ builder.Services.AddHostedService<RTRatingUpdateService>();
 builder.Services.AddSingleton<RTScrapingServiceFactory>();
 builder.Services.AddScoped<RTScrapingService>();
 
+builder.Services.AddHostedService<MovieDataCompletionService>();
+
 // Configure logging
 builder.Logging.AddConsole();
 
