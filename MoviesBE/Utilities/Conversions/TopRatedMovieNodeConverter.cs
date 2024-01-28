@@ -5,7 +5,8 @@ namespace MoviesBE.Utilities.Conversions;
 
 public static class TopRatedMovieNodeConverter
 {
-    public static TopRatedMovie ConvertNodeToTopRatedMovie(IEntity movieNode, IEnumerable<INode> ratingNodes)
+    public static TopRatedMovie ConvertNodeToTopRatedMovie(INode movieNode, IEnumerable<INode> ratingNodes,
+        IEnumerable<INode> genreNodes)
     {
         var topRatedMovie = new TopRatedMovie
         {
@@ -21,11 +22,11 @@ public static class TopRatedMovieNodeConverter
                 : string.Empty,
             Overview = movieNode.Properties.ContainsKey("overview")
                 ? movieNode.Properties["overview"].As<string>()
-                : string.Empty
+                : string.Empty,
+            Runtime = movieNode.Properties.ContainsKey("runtime") ? movieNode.Properties["runtime"].As<int>() : 0,
+            Ratings = ratingNodes.Select(RatingNodeConverter.ConvertNodeToRating).ToList(),
+            Genres = genreNodes.Select(GenreNodeConverter.ConvertNodeToGenre).ToList()
         };
-
-        topRatedMovie.Ratings = ratingNodes.Select(RatingNodeConverter.ConvertNodeToRating).ToList();
-
         return topRatedMovie;
     }
 }

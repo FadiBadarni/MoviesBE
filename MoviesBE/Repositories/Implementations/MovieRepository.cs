@@ -237,11 +237,12 @@ public class MovieRepository : IMovieRepository
                 @"MATCH (m:Movie)
                           WHERE m.voteCount >= $minimumVotesThreshold
                           OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
-                          WITH m, r
+                          OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                          WITH m, r, COLLECT(g) AS Genres
                           WHERE r IS NULL OR 
                                 (r.provider = 'IMDb' AND r.score >= $ratingThreshold) OR 
                                 (r.provider = 'Rotten Tomatoes' AND r.score >= $ratingThreshold)
-                          RETURN m, COLLECT(r) AS Ratings
+                          RETURN m, COLLECT(r) AS Ratings, Genres
                           ORDER BY m.voteAverage DESC, m.voteCount DESC",
                 new { ratingThreshold, minimumVotesThreshold });
 
@@ -253,9 +254,12 @@ public class MovieRepository : IMovieRepository
         {
             var movieNode = record["m"].As<INode>();
             var ratingNodes = record["Ratings"].As<List<INode>>();
-            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes);
+            var genreNodes = record["Genres"].As<List<INode>>();
+
+            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes, genreNodes);
             movies.Add(movie);
         }
+
 
         return movies;
     }
