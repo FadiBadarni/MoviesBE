@@ -12,6 +12,7 @@ public class MovieRepository : IMovieRepository
     private readonly ICreditsRepository _creditsRepository;
     private readonly IGenreRepository _genreRepository;
     private readonly ILogger<MovieRepository> _logger;
+    private readonly IMLanguageRepository _mLanguageRepository;
     private readonly IDriver _neo4JDriver;
     private readonly IPCompanyRepository _pCompanyRepository;
     private readonly IPCountryRepository _pCountryRepository;
@@ -21,7 +22,7 @@ public class MovieRepository : IMovieRepository
     public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
         ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository,
-        IPCountryRepository pCountryRepository)
+        IPCountryRepository pCountryRepository, IMLanguageRepository mLanguageRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
@@ -31,6 +32,7 @@ public class MovieRepository : IMovieRepository
         _genreRepository = genreRepository;
         _pCompanyRepository = pCompanyRepository;
         _pCountryRepository = pCountryRepository;
+        _mLanguageRepository = mLanguageRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -58,7 +60,7 @@ public class MovieRepository : IMovieRepository
 
                 if (movie.SpokenLanguages != null)
                 {
-                    await SaveSpokenLanguagesAsync(movie, tx);
+                    await _mLanguageRepository.SaveSpokenLanguagesAsync(movie, tx);
                 }
 
                 await SaveMovieBackdropsAsync(movie, tx);
@@ -442,40 +444,6 @@ public class MovieRepository : IMovieRepository
                 voteAverage = movie.VoteAverage,
                 voteCount = movie.VoteCount
             });
-    }
-
-
-
-
-    private static async Task SaveSpokenLanguagesAsync(Movie movie, IAsyncQueryRunner tx)
-    {
-        if (movie.SpokenLanguages == null)
-        {
-            return;
-        }
-
-        // First, detach all existing spoken language relationships from this movie.
-        await tx.RunAsync(
-            @"MATCH (m:Movie {id: $movieId})-[r:HAS_LANGUAGE]->(l:Language)
-          DELETE r",
-            new { movieId = movie.Id });
-
-        // Then, merge each spoken language and create a relationship with the movie.
-        foreach (var language in movie.SpokenLanguages)
-            await tx.RunAsync(
-                @"MERGE (l:Language {iso6391: $iso6391})
-              ON CREATE SET l.name = $name, l.englishName = $englishName
-              ON MATCH SET l.name = $name, l.englishName = $englishName
-              WITH l
-              MATCH (m:Movie {id: $movieId})
-              MERGE (m)-[:HAS_LANGUAGE]->(l)",
-                new
-                {
-                    iso6391 = language.Iso6391,
-                    name = language.Name,
-                    englishName = language.EnglishName,
-                    movieId = movie.Id
-                });
     }
 
 
