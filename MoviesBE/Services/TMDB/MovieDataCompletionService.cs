@@ -44,8 +44,6 @@ public class MovieDataCompletionService : BaseHostedService
                             break;
                         }
 
-                        //TODO: This is bad because is movie data complete checks all fields of the movie and we need
-                        //TODO: to get the entire movie from the repo method with its relationships in order to check it correctly
                         if (!movieDataService.IsMovieDataComplete(movie))
                         {
                             await movieDataService.GetMovieAsync(movie.Id);

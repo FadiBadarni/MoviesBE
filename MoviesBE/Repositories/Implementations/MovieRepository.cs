@@ -10,6 +10,7 @@ namespace MoviesBE.Repositories.Implementations;
 public class MovieRepository : IMovieRepository
 {
     private readonly ICreditsRepository _creditsRepository;
+    private readonly IGenreRepository _genreRepository;
     private readonly ILogger<MovieRepository> _logger;
     private readonly IDriver _neo4JDriver;
     private readonly PopularityThresholdService _popularityThresholdService;
@@ -17,13 +18,14 @@ public class MovieRepository : IMovieRepository
 
     public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
-        ILogger<MovieRepository> logger)
+        ILogger<MovieRepository> logger, IGenreRepository genreRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
         _ratingThresholdService = ratingThresholdService;
         _popularityThresholdService = popularityThresholdService;
         _logger = logger;
+        _genreRepository = genreRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -36,7 +38,7 @@ public class MovieRepository : IMovieRepository
                 await SaveMovieNodeAsync(movie, tx);
                 if (movie.Genres != null)
                 {
-                    await SaveGenresAsync(movie, tx);
+                    await _genreRepository.SaveGenresAsync(movie, tx);
                 }
 
                 if (movie.ProductionCompanies != null)
@@ -436,33 +438,6 @@ public class MovieRepository : IMovieRepository
                 voteCount = movie.VoteCount
             });
     }
-
-
-    private static async Task SaveGenresAsync(Movie movie, IAsyncQueryRunner tx)
-    {
-        if (movie.Genres == null)
-        {
-            return;
-        }
-
-        // Remove existing genre relationships from this movie.
-        await tx.RunAsync(
-            @"MATCH (m:Movie {id: $movieId})-[r:HAS_GENRE]->(g:Genre)
-          DELETE r",
-            new { movieId = movie.Id });
-
-        // Merge each genre and create a new relationship with the movie.
-        foreach (var genre in movie.Genres)
-            await tx.RunAsync(
-                @"MERGE (g:Genre {id: $id})
-              ON CREATE SET g.name = $name
-              ON MATCH SET g.name = $name
-              WITH g
-              MATCH (m:Movie {id: $movieId})
-              MERGE (m)-[:HAS_GENRE]->(g)",
-                new { id = genre.Id, name = genre.Name, movieId = movie.Id });
-    }
-
 
     private static async Task SaveProductionCompaniesAsync(Movie movie, IAsyncQueryRunner tx)
     {
