@@ -19,12 +19,13 @@ public class MovieRepository : IMovieRepository
     private readonly IPCountryRepository _pCountryRepository;
     private readonly PopularityThresholdService _popularityThresholdService;
     private readonly RatingThresholdService _ratingThresholdService;
+    private readonly IMVideoRepository _videoRepository;
 
     public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
         ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository,
         IPCountryRepository pCountryRepository, IMLanguageRepository mLanguageRepository,
-        IMBackdropRepository backdropRepository)
+        IMBackdropRepository backdropRepository, IMVideoRepository videoRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
@@ -36,6 +37,7 @@ public class MovieRepository : IMovieRepository
         _pCountryRepository = pCountryRepository;
         _mLanguageRepository = mLanguageRepository;
         _backdropRepository = backdropRepository;
+        _videoRepository = videoRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -72,7 +74,10 @@ public class MovieRepository : IMovieRepository
                     await _backdropRepository.SaveMovieBackdropsAsync(movie, tx);
                 }
 
-                await SaveMovieVideosAsync(movie, tx);
+                if (movie.Trailers != null)
+                {
+                    await _videoRepository.SaveMovieVideosAsync(movie, tx);
+                }
 
                 if (movie.Credits != null)
                 {
@@ -451,44 +456,5 @@ public class MovieRepository : IMovieRepository
                 voteAverage = movie.VoteAverage,
                 voteCount = movie.VoteCount
             });
-    }
-
-
-    private static async Task SaveMovieVideosAsync(Movie movie, IAsyncQueryRunner tx)
-    {
-        if (movie.Trailers == null)
-        {
-            return;
-        }
-
-        // First, detach all existing video relationships from this movie to avoid duplicates
-        await tx.RunAsync(
-            @"MATCH (m:Movie {id: $movieId})-[r:HAS_VIDEO]->(v:Video)
-          DELETE r",
-            new { movieId = movie.Id });
-
-        // For each video, merge the video node and create a relationship with the movie
-        foreach (var video in movie.Trailers)
-            await tx.RunAsync(
-                @"MERGE (v:Video {id: $id})
-              ON CREATE SET
-                v.name = $name,
-                v.key = $key,
-                v.site = $site,
-                v.type = $type,
-                v.size = $size
-              WITH v
-              MATCH (m:Movie {id: $movieId})
-              MERGE (m)-[:HAS_VIDEO]->(v)",
-                new
-                {
-                    id = video.Id,
-                    name = video.Name,
-                    key = video.Key,
-                    site = video.Site,
-                    type = video.Type,
-                    size = video.Size,
-                    movieId = movie.Id
-                });
     }
 }
