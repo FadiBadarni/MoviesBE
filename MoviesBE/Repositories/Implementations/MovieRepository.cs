@@ -175,20 +175,119 @@ public class MovieRepository : IMovieRepository
         });
     }
 
-
     public async Task<List<PopularMovie>> GetLimitedPopularMoviesAsync(int limit = 3)
     {
         return await FetchPopularMoviesAsync(limit);
     }
 
-    public async Task<List<TopRatedMovie>> GetTopRatedMoviesAsync()
-    {
-        return await FetchTopRatedMoviesAsync();
-    }
-
     public async Task<List<TopRatedMovie>> GetLimitedTopRatedMoviesAsync(int limit = 3)
     {
         return await FetchTopRatedMoviesAsync(limit);
+    }
+
+    public async Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize)
+    {
+        var movies = new List<TopRatedMovie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var skip = (page - 1) * pageSize;
+
+        // Query for fetching all top-rated movies with pagination
+        var query = @"
+    MATCH (m:Movie)
+    OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
+    OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+    WITH m, 
+         COLLECT(DISTINCT r) AS Ratings, 
+         COLLECT(DISTINCT g) AS Genres,
+         MAX(CASE WHEN r.provider = 'IMDb' THEN r.score ELSE NULL END) AS maxIMDbRating,
+         MAX(CASE WHEN r.provider = 'Rotten Tomatoes' THEN r.score ELSE NULL END) AS maxRTRating
+    ORDER BY 
+        CASE 
+            WHEN maxIMDbRating IS NOT NULL THEN maxIMDbRating
+            ELSE 0 
+        END DESC,
+        CASE 
+            WHEN maxRTRating IS NOT NULL THEN maxRTRating / 10
+            ELSE 0 
+        END DESC,
+        m.voteCount DESC
+    SKIP $skip
+    LIMIT $pageSize
+    RETURN m, Ratings, Genres";
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(query, new { skip, pageSize });
+            return await cursor.ToListAsync();
+        });
+
+        foreach (var record in result)
+        {
+            var movieNode = record["m"].As<INode>();
+            var ratingNodes = record["Ratings"].As<List<INode>>();
+            var genreNodes = record["Genres"].As<List<INode>>();
+
+            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes, genreNodes);
+            movies.Add(movie);
+        }
+
+        // Query for total count
+        var countQuery = @"MATCH (m:Movie) RETURN count(m) as totalCount";
+        var totalCount = 0;
+        await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(countQuery);
+            if (await cursor.FetchAsync())
+            {
+                totalCount = cursor.Current["totalCount"].As<int>();
+            }
+        });
+
+        return (movies, totalCount);
+    }
+
+    public async Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize)
+    {
+        var movies = new List<PopularMovie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var skip = (page - 1) * pageSize;
+
+        var query = @"MATCH (m:Movie)
+                        OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                        RETURN m, COLLECT(g) AS Genres
+                        ORDER BY m.popularity DESC
+                        SKIP $skip
+                        LIMIT $pageSize";
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(query, new { skip, pageSize });
+            return await cursor.ToListAsync();
+        });
+
+        foreach (var record in result)
+        {
+            var movieNode = record["m"].As<INode>();
+            var genreNodes = record["Genres"].As<List<INode>>();
+            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode, genreNodes);
+            movies.Add(movie);
+        }
+
+        // Query for total count
+        var countQuery = @"MATCH (m:Movie) RETURN count(m) as totalCount";
+        var totalCount = 0;
+        await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(countQuery);
+            if (await cursor.FetchAsync())
+            {
+                totalCount = cursor.Current["totalCount"].As<int>();
+            }
+        });
+
+        return (movies, totalCount);
     }
 
     public async Task<List<Movie>> GetMoviesWithoutIMDbRatingAsync()
@@ -290,48 +389,6 @@ public class MovieRepository : IMovieRepository
         return movies;
     }
 
-    public async Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize)
-    {
-        var movies = new List<PopularMovie>();
-        await using var session = _neo4JDriver.AsyncSession();
-
-        var skip = (page - 1) * pageSize;
-
-        var query = @"MATCH (m:Movie)
-                        OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
-                        RETURN m, COLLECT(g) AS Genres
-                        ORDER BY m.popularity DESC
-                        SKIP $skip
-                        LIMIT $pageSize";
-
-        var result = await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(query, new { skip, pageSize });
-            return await cursor.ToListAsync();
-        });
-
-        foreach (var record in result)
-        {
-            var movieNode = record["m"].As<INode>();
-            var genreNodes = record["Genres"].As<List<INode>>();
-            var movie = PopularMovieNodeConverter.ConvertNodeToPopularMovie(movieNode, genreNodes);
-            movies.Add(movie);
-        }
-
-        // Query for total count
-        var countQuery = @"MATCH (m:Movie) RETURN count(m) as totalCount";
-        var totalCount = 0;
-        await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(countQuery);
-            if (await cursor.FetchAsync())
-            {
-                totalCount = cursor.Current["totalCount"].As<int>();
-            }
-        });
-
-        return (movies, totalCount);
-    }
 
     private async Task<List<TopRatedMovie>> FetchTopRatedMoviesAsync(int? limit = null)
     {

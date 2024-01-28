@@ -30,6 +30,14 @@ public class MoviesController : ControllerBase
         return Ok(movies);
     }
 
+    [HttpGet("tmdb/top-rated")]
+    public async Task<ActionResult<List<Movie>>> GetTMDBTopRatedMovies()
+    {
+        var movies = await _movieDataService.GetTMDBTopRatedAndSave();
+        return Ok(movies);
+    }
+
+
     [HttpGet("popular")]
     public async Task<ActionResult<List<PopularMovie>>> GetPopularMovies([FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
@@ -38,19 +46,14 @@ public class MoviesController : ControllerBase
         return Ok(new { movies, totalMovies });
     }
 
-    [HttpGet("tmdb/top-rated")]
-    public async Task<ActionResult<List<Movie>>> GetTMDBTopRatedMovies()
+    [HttpGet("top-rated")]
+    public async Task<ActionResult<List<TopRatedMovie>>> GetTopRatedMovies([FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var movies = await _movieDataService.GetTMDBTopRatedAndSave();
-        return Ok(movies);
+        var (movies, totalMovies) = await _movieDataService.GetTopRatedMoviesAsync(page, pageSize);
+        return Ok(new { movies, totalMovies });
     }
 
-    [HttpGet("top-rated")]
-    public async Task<ActionResult<List<TopRatedMovie>>> GetTopRatedMovies()
-    {
-        var movies = await _movieDataService.GetTopRatedMoviesAsync();
-        return Ok(movies);
-    }
 
     [HttpGet("popular/limited")]
     public async Task<ActionResult<List<PopularMovie>>> GetLimitedPopularMovies()
