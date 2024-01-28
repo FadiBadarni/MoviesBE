@@ -33,6 +33,7 @@ builder.Services.AddScoped<IGenreRepository, GenreRepository>();
 builder.Services.AddScoped<IPCompanyRepository, PCompanyRepository>();
 builder.Services.AddScoped<IPCountryRepository, PCountryRepository>();
 builder.Services.AddScoped<IMLanguageRepository, MLanguageRepository>();
+builder.Services.AddScoped<IMBackdropRepository, MBackdropRepository>();
 
 builder.Services.AddScoped<IRatingRepository, RatingRepository>();
 builder.Services.AddSingleton<RatingRepositoryFactory>();

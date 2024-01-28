@@ -9,6 +9,7 @@ namespace MoviesBE.Repositories.Implementations;
 
 public class MovieRepository : IMovieRepository
 {
+    private readonly IMBackdropRepository _backdropRepository;
     private readonly ICreditsRepository _creditsRepository;
     private readonly IGenreRepository _genreRepository;
     private readonly ILogger<MovieRepository> _logger;
@@ -22,7 +23,8 @@ public class MovieRepository : IMovieRepository
     public MovieRepository(IDriver neo4JDriver, ICreditsRepository creditsRepository,
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
         ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository,
-        IPCountryRepository pCountryRepository, IMLanguageRepository mLanguageRepository)
+        IPCountryRepository pCountryRepository, IMLanguageRepository mLanguageRepository,
+        IMBackdropRepository backdropRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
@@ -33,6 +35,7 @@ public class MovieRepository : IMovieRepository
         _pCompanyRepository = pCompanyRepository;
         _pCountryRepository = pCountryRepository;
         _mLanguageRepository = mLanguageRepository;
+        _backdropRepository = backdropRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -43,6 +46,7 @@ public class MovieRepository : IMovieRepository
             await session.ExecuteWriteAsync(async tx =>
             {
                 await SaveMovieNodeAsync(movie, tx);
+
                 if (movie.Genres != null)
                 {
                     await _genreRepository.SaveGenresAsync(movie, tx);
@@ -63,7 +67,10 @@ public class MovieRepository : IMovieRepository
                     await _mLanguageRepository.SaveSpokenLanguagesAsync(movie, tx);
                 }
 
-                await SaveMovieBackdropsAsync(movie, tx);
+                if (movie.Backdrops != null)
+                {
+                    await _backdropRepository.SaveMovieBackdropsAsync(movie, tx);
+                }
 
                 await SaveMovieVideosAsync(movie, tx);
 
@@ -446,47 +453,6 @@ public class MovieRepository : IMovieRepository
             });
     }
 
-
-    private static async Task SaveMovieBackdropsAsync(Movie movie, IAsyncQueryRunner tx)
-    {
-        if (movie.Backdrops == null)
-        {
-            return;
-        }
-
-        // First, detach all existing backdrops from this movie to avoid duplicates.
-        await tx.RunAsync(
-            @"MATCH (m:Movie {id: $movieId})-[r:HAS_BACKDROP]->(b:Backdrop)
-          DELETE r",
-            new { movieId = movie.Id });
-
-        // Then, merge each backdrop and create a relationship with the movie.
-        foreach (var backdrop in movie.Backdrops.Where(b => !string.IsNullOrEmpty(b.FilePath)))
-            await tx.RunAsync(
-                @"MERGE (b:Backdrop {filePath: $filePath})
-              ON CREATE SET 
-                b.voteAverage = $voteAverage,
-                b.aspectRatio = $aspectRatio,
-                b.width = $width,
-                b.height = $height
-              ON MATCH SET 
-                b.voteAverage = $voteAverage,
-                b.aspectRatio = $aspectRatio,
-                b.width = $width,
-                b.height = $height
-              WITH b
-              MATCH (m:Movie {id: $movieId})
-              MERGE (m)-[:HAS_BACKDROP]->(b)",
-                new
-                {
-                    filePath = backdrop.FilePath,
-                    voteAverage = backdrop.VoteAverage,
-                    aspectRatio = backdrop.AspectRatio,
-                    width = backdrop.Width,
-                    height = backdrop.Height,
-                    movieId = movie.Id
-                });
-    }
 
     private static async Task SaveMovieVideosAsync(Movie movie, IAsyncQueryRunner tx)
     {
