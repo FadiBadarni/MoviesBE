@@ -380,11 +380,19 @@ public class MovieRepository : IMovieRepository
         }
 
         // Query for total count
-        var countQuery = @"MATCH (m:Movie) RETURN count(m) as totalCount";
+        var countQuery = $@"MATCH (m:Movie)-[:HAS_GENRE]->(g:Genre)
+                    WHERE 1=1 {whereClause}
+                    RETURN count(DISTINCT m) as totalCount";
         var totalCount = 0;
+        var queryParameters = new Dictionary<string, object>();
+        if (genreFilter.HasValue)
+        {
+            queryParameters.Add("genreFilter", genreFilter.Value);
+        }
+
         await session.ExecuteReadAsync(async tx =>
         {
-            var cursor = await tx.RunAsync(countQuery);
+            var cursor = await tx.RunAsync(countQuery, queryParameters);
             if (await cursor.FetchAsync())
             {
                 totalCount = cursor.Current["totalCount"].As<int>();
