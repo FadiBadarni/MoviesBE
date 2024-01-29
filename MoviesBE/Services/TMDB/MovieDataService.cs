@@ -43,9 +43,10 @@ public class MovieDataService
         return await _movieRepository.GetPopularMoviesAsync(page, pageSize);
     }
 
-    public async Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize, string filterType)
+    public async Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize, string ratingFilter,
+        int? genreFilter)
     {
-        return await _movieRepository.GetTopRatedMoviesAsync(page, pageSize, filterType);
+        return await _movieRepository.GetTopRatedMoviesAsync(page, pageSize, ratingFilter, genreFilter);
     }
 
     public async Task<List<Movie>> GetTMDBPopularAndSave()

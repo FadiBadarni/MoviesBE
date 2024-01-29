@@ -185,67 +185,6 @@ public class MovieRepository : IMovieRepository
         return await FetchTopRatedMoviesAsync(limit);
     }
 
-    public async Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize, string filterType)
-    {
-        var movies = new List<TopRatedMovie>();
-        await using var session = _neo4JDriver.AsyncSession();
-
-        var skip = (page - 1) * pageSize;
-
-        // Dynamic ORDER BY clause based on filterType
-        var orderByClause = filterType switch
-        {
-            "IMDb" => "ORDER BY COALESCE(maxIMDbRating, 0) DESC, COALESCE(maxRTRating, 0) DESC, m.voteCount DESC",
-            "RottenTomatoes" =>
-                "ORDER BY COALESCE(maxRTRating, 0) DESC, COALESCE(maxIMDbRating, 0) DESC, m.voteCount DESC",
-            "TMDB" => "ORDER BY m.voteAverage DESC, m.voteCount DESC",
-            _ => "ORDER BY m.voteAverage DESC, m.voteCount DESC" // Default sorting
-        };
-
-        var query = $@"MATCH (m:Movie)
-                        OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
-                        OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
-                        WITH m, 
-                             COLLECT(DISTINCT r) AS Ratings, 
-                             COLLECT(DISTINCT g) AS Genres,
-                             MAX(CASE WHEN r.provider = 'IMDb' THEN r.score ELSE NULL END) AS maxIMDbRating,
-                             MAX(CASE WHEN r.provider = 'Rotten Tomatoes' THEN r.score ELSE NULL END) AS maxRTRating
-                        {orderByClause}
-                        SKIP $skip
-                        LIMIT $pageSize
-                        RETURN m, Ratings, Genres";
-
-        var result = await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(query, new { skip, pageSize });
-            return await cursor.ToListAsync();
-        });
-
-        foreach (var record in result)
-        {
-            var movieNode = record["m"].As<INode>();
-            var ratingNodes = record["Ratings"].As<List<INode>>();
-            var genreNodes = record["Genres"].As<List<INode>>();
-
-            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes, genreNodes);
-            movies.Add(movie);
-        }
-
-        // Query for total count
-        var countQuery = @"MATCH (m:Movie) RETURN count(m) as totalCount";
-        var totalCount = 0;
-        await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(countQuery);
-            if (await cursor.FetchAsync())
-            {
-                totalCount = cursor.Current["totalCount"].As<int>();
-            }
-        });
-
-        return (movies, totalCount);
-    }
-
 
     public async Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize)
     {
@@ -335,7 +274,7 @@ public class MovieRepository : IMovieRepository
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie)
                   WHERE m.title IS NOT NULL
-                  OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'Rotten Tomatoes'})
+                  OPTIONAL MATCH (m)-[r:HAS_RATING]->(rating:Rating {provider: 'RottenTomatoes'})
                   WITH m, rating
                   WHERE rating IS NULL OR rating.score = 0
                   RETURN m");
@@ -389,6 +328,72 @@ public class MovieRepository : IMovieRepository
         return movies;
     }
 
+    public async Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize, string ratingFilter,
+        int? genreFilter)
+    {
+        var movies = new List<TopRatedMovie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var skip = (page - 1) * pageSize;
+
+        // Dynamic WHERE clause based on genreFilter
+        var whereClause = genreFilter.HasValue ? "AND g.id = $genreFilter" : "";
+
+        // Dynamic ORDER BY clause based on filterType
+        var orderByClause = ratingFilter switch
+        {
+            "IMDb" => "ORDER BY COALESCE(maxIMDbRating, 0) DESC, COALESCE(maxRTRating, 0) DESC, m.voteCount DESC",
+            "RottenTomatoes" =>
+                "ORDER BY COALESCE(maxRTRating, 0) DESC, COALESCE(maxIMDbRating, 0) DESC, m.voteCount DESC",
+            "TMDB" => "ORDER BY m.voteAverage DESC, m.voteCount DESC",
+            _ => "ORDER BY m.voteAverage DESC, m.voteCount DESC" // Default sorting
+        };
+
+        var query = $@"MATCH (m:Movie)-[:HAS_GENRE]->(g:Genre)
+                        OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
+                        WITH m, g, r
+                        WHERE 1=1 {whereClause}
+                        WITH m, 
+                             COLLECT(DISTINCT r) AS Ratings, 
+                             COLLECT(DISTINCT g) AS Genres,
+                             MAX(CASE WHEN r.provider = 'IMDb' THEN r.score ELSE NULL END) AS maxIMDbRating,
+                             MAX(CASE WHEN r.provider = 'RottenTomatoes' THEN r.score ELSE NULL END) AS maxRTRating
+                        {orderByClause}
+                        SKIP $skip
+                        LIMIT $pageSize
+                        RETURN m, Ratings, Genres";
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(query, new { skip, pageSize, genreFilter });
+            return await cursor.ToListAsync();
+        });
+
+        foreach (var record in result)
+        {
+            var movieNode = record["m"].As<INode>();
+            var ratingNodes = record["Ratings"].As<List<INode>>();
+            var genreNodes = record["Genres"].As<List<INode>>();
+
+            var movie = TopRatedMovieNodeConverter.ConvertNodeToTopRatedMovie(movieNode, ratingNodes, genreNodes);
+            movies.Add(movie);
+        }
+
+        // Query for total count
+        var countQuery = @"MATCH (m:Movie) RETURN count(m) as totalCount";
+        var totalCount = 0;
+        await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(countQuery);
+            if (await cursor.FetchAsync())
+            {
+                totalCount = cursor.Current["totalCount"].As<int>();
+            }
+        });
+
+        return (movies, totalCount);
+    }
+
 
     private async Task<List<TopRatedMovie>> FetchTopRatedMoviesAsync(int? limit = null)
     {
@@ -404,7 +409,7 @@ public class MovieRepository : IMovieRepository
                       WITH m, r, COLLECT(g) AS Genres
                       WHERE r IS NULL OR 
                             (r.provider = 'IMDb' AND r.score >= $ratingThreshold) OR 
-                            (r.provider = 'Rotten Tomatoes' AND r.score >= $ratingThreshold)
+                            (r.provider = 'RottenTomatoes' AND r.score >= $ratingThreshold)
                       RETURN m, COLLECT(r) AS Ratings, Genres";
 
         if (limit.HasValue)
