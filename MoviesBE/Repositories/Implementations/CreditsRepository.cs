@@ -24,40 +24,32 @@ public class CreditsRepository : ICreditsRepository
     private async Task SaveCastAsync(IEnumerable<CastMember> cast, int movieId, IAsyncQueryRunner tx)
     {
         // Detach old cast relationships
-        var detachQuery = @"
-        MATCH (m:Movie {id: $movieId})-[r:HAS_CAST]->(c:Cast)
-        DELETE r";
+        var detachQuery = @"MATCH (m:Movie {id: $movieId})-[r:HAS_CAST]->(c:Cast)
+                            DELETE r";
         await tx.RunAsync(detachQuery, new { movieId });
 
         foreach (var member in cast)
         {
-            var query = @"
-            MERGE (c:Cast {id: $id})
-            ON CREATE SET
-                c.adult = $adult,
-                c.gender = $gender,
-                c.knownForDepartment = $knownForDepartment,
-                c.name = $name,
-                c.popularity = $popularity,
-                c.profilePath = $profilePath,
-                c.castId = $castId,
-                c.character = $character,
-                c.creditId = $creditId,
-                c.order = $order
-            ON MATCH SET
-                c.adult = $adult,
-                c.gender = $gender,
-                c.knownForDepartment = $knownForDepartment,
-                c.name = $name,
-                c.popularity = $popularity,
-                c.profilePath = $profilePath,
-                c.castId = $castId,
-                c.character = $character,
-                c.creditId = $creditId,
-                c.order = $order
-            WITH c
-            MATCH (m:Movie {id: $movieId})
-            MERGE (m)-[:HAS_CAST]->(c)";
+            var query = @"MERGE (c:Cast {id: $id})
+                        ON CREATE SET
+                            c.adult = $adult,
+                            c.gender = $gender,
+                            c.knownForDepartment = $knownForDepartment,
+                            c.name = $name,
+                            c.popularity = $popularity,
+                            c.profilePath = $profilePath,
+                            c.castId = $castId
+                        ON MATCH SET
+                            c.adult = $adult,
+                            c.gender = $gender,
+                            c.knownForDepartment = $knownForDepartment,
+                            c.name = $name,
+                            c.popularity = $popularity,
+                            c.profilePath = $profilePath,
+                            c.castId = $castId
+                        WITH c
+                        MATCH (m:Movie {id: $movieId})
+                        MERGE (m)-[:HAS_CAST {character: $character, creditId: $creditId, order: $order}]->(c)";
 
             await tx.RunAsync(query, new
             {
@@ -77,42 +69,35 @@ public class CreditsRepository : ICreditsRepository
         }
     }
 
-
     private async Task SaveCrewAsync(IEnumerable<CrewMember> crew, int movieId, IAsyncQueryRunner tx)
     {
         // Detach old crew relationships
-        var detachQuery = @"
-                            MATCH (m:Movie {id: $movieId})-[r:HAS_CREW]->(cr:Crew)
+        var detachQuery = @"MATCH (m:Movie {id: $movieId})-[r:HAS_CREW]->(cr:Crew)
                             DELETE r";
         await tx.RunAsync(detachQuery, new { movieId });
 
         foreach (var member in crew)
         {
-            var query = @"
-            MERGE (cr:Crew {id: $id})
-            ON CREATE SET
-                cr.adult = $adult,
-                cr.gender = $gender,
-                cr.knownForDepartment = $knownForDepartment,
-                cr.name = $name,
-                cr.popularity = $popularity,
-                cr.profilePath = $profilePath,
-                cr.creditId = $creditId,
-                cr.department = $department,
-                cr.job = $job
-            ON MATCH SET
-                cr.adult = $adult,
-                cr.gender = $gender,
-                cr.knownForDepartment = $knownForDepartment,
-                cr.name = $name,
-                cr.popularity = $popularity,
-                cr.profilePath = $profilePath,
-                cr.creditId = $creditId,
-                cr.department = $department,
-                cr.job = $job
-            WITH cr
-            MATCH (m:Movie {id: $movieId})
-            MERGE (m)-[:HAS_CREW]->(cr)";
+            var query = @"MERGE (cr:Crew {id: $id})
+                            ON CREATE SET
+                                cr.adult = $adult,
+                                cr.gender = $gender,
+                                cr.knownForDepartment = $knownForDepartment,
+                                cr.name = $name,
+                                cr.popularity = $popularity,
+                                cr.profilePath = $profilePath,
+                                cr.creditId = $creditId
+                            ON MATCH SET
+                                cr.adult = $adult,
+                                cr.gender = $gender,
+                                cr.knownForDepartment = $knownForDepartment,
+                                cr.name = $name,
+                                cr.popularity = $popularity,
+                                cr.profilePath = $profilePath,
+                                cr.creditId = $creditId
+                            WITH cr
+                            MATCH (m:Movie {id: $movieId})
+                            MERGE (m)-[:HAS_CREW {department: $department, job: $job}]->(cr)";
 
             await tx.RunAsync(query, new
             {
