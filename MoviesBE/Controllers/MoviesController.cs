@@ -47,10 +47,12 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet("top-rated")]
-    public async Task<ActionResult<List<TopRatedMovie>>> GetTopRatedMovies([FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<List<TopRatedMovie>>> GetTopRatedMovies(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string filterType = "Default")
     {
-        var (movies, totalMovies) = await _movieDataService.GetTopRatedMoviesAsync(page, pageSize);
+        var (movies, totalMovies) = await _movieDataService.GetTopRatedMoviesAsync(page, pageSize, filterType);
         return Ok(new { movies, totalMovies });
     }
 

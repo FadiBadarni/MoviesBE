@@ -185,36 +185,35 @@ public class MovieRepository : IMovieRepository
         return await FetchTopRatedMoviesAsync(limit);
     }
 
-    public async Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize)
+    public async Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize, string filterType)
     {
         var movies = new List<TopRatedMovie>();
         await using var session = _neo4JDriver.AsyncSession();
 
         var skip = (page - 1) * pageSize;
 
-        // Query for fetching all top-rated movies with pagination
-        var query = @"
-    MATCH (m:Movie)
-    OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
-    OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
-    WITH m, 
-         COLLECT(DISTINCT r) AS Ratings, 
-         COLLECT(DISTINCT g) AS Genres,
-         MAX(CASE WHEN r.provider = 'IMDb' THEN r.score ELSE NULL END) AS maxIMDbRating,
-         MAX(CASE WHEN r.provider = 'Rotten Tomatoes' THEN r.score ELSE NULL END) AS maxRTRating
-    ORDER BY 
-        CASE 
-            WHEN maxIMDbRating IS NOT NULL THEN maxIMDbRating
-            ELSE 0 
-        END DESC,
-        CASE 
-            WHEN maxRTRating IS NOT NULL THEN maxRTRating / 10
-            ELSE 0 
-        END DESC,
-        m.voteCount DESC
-    SKIP $skip
-    LIMIT $pageSize
-    RETURN m, Ratings, Genres";
+        // Dynamic ORDER BY clause based on filterType
+        var orderByClause = filterType switch
+        {
+            "IMDb" => "ORDER BY COALESCE(maxIMDbRating, 0) DESC, COALESCE(maxRTRating, 0) DESC, m.voteCount DESC",
+            "RottenTomatoes" =>
+                "ORDER BY COALESCE(maxRTRating, 0) DESC, COALESCE(maxIMDbRating, 0) DESC, m.voteCount DESC",
+            "Popularity" => "ORDER BY m.popularity DESC, m.voteCount DESC",
+            _ => "ORDER BY m.voteAverage DESC, m.voteCount DESC" // Default sorting
+        };
+
+        var query = $@"MATCH (m:Movie)
+                        OPTIONAL MATCH (m)-[rel:HAS_RATING]->(r:Rating)
+                        OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
+                        WITH m, 
+                             COLLECT(DISTINCT r) AS Ratings, 
+                             COLLECT(DISTINCT g) AS Genres,
+                             MAX(CASE WHEN r.provider = 'IMDb' THEN r.score ELSE NULL END) AS maxIMDbRating,
+                             MAX(CASE WHEN r.provider = 'Rotten Tomatoes' THEN r.score ELSE NULL END) AS maxRTRating
+                        {orderByClause}
+                        SKIP $skip
+                        LIMIT $pageSize
+                        RETURN m, Ratings, Genres";
 
         var result = await session.ExecuteReadAsync(async tx =>
         {
@@ -246,6 +245,7 @@ public class MovieRepository : IMovieRepository
 
         return (movies, totalCount);
     }
+
 
     public async Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize)
     {

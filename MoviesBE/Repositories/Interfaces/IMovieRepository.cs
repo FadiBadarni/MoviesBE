@@ -11,7 +11,7 @@ public interface IMovieRepository
 
     Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize);
 
-    Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize);
+    Task<(List<TopRatedMovie>, int)> GetTopRatedMoviesAsync(int page, int pageSize, string filterType);
 
     Task<List<Movie>> GetMoviesWithoutIMDbRatingAsync();
 
