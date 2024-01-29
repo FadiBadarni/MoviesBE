@@ -6,6 +6,13 @@ namespace MoviesBE.Repositories.Implementations;
 
 public class GenreRepository : IGenreRepository
 {
+    private readonly IDriver _neo4JDriver;
+
+    public GenreRepository(IDriver neo4JDriver)
+    {
+        _neo4JDriver = neo4JDriver;
+    }
+
     public async Task SaveGenresAsync(Movie movie, IAsyncQueryRunner tx)
     {
         if (movie.Genres == null)
@@ -29,5 +36,29 @@ public class GenreRepository : IGenreRepository
               MATCH (m:Movie {id: $movieId})
               MERGE (m)-[:HAS_GENRE]->(g)",
                 new { id = genre.Id, name = genre.Name, movieId = movie.Id });
+    }
+
+    public async Task<IEnumerable<Genre>> GetGenresAsync()
+    {
+        // Implementation to fetch genres from the database
+        // Example with a Neo4j query:
+        var query = "MATCH (g:Genre) RETURN g";
+        var genres = new List<Genre>();
+
+        // Assuming 'tx.RunAsync' executes a Neo4j query and returns results
+        await using var session = _neo4JDriver.AsyncSession();
+        var cursor = await session.RunAsync(query);
+        while (await cursor.FetchAsync())
+        {
+            var record = cursor.Current;
+            var genreNode = record["g"].As<INode>();
+            genres.Add(new Genre
+            {
+                Id = genreNode.Properties["id"].As<int>(),
+                Name = genreNode.Properties["name"].As<string>()
+            });
+        }
+
+        return genres;
     }
 }

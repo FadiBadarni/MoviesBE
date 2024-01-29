@@ -6,4 +6,5 @@ namespace MoviesBE.Repositories.Interfaces;
 public interface IGenreRepository
 {
     Task SaveGenresAsync(Movie movie, IAsyncQueryRunner tx);
+    Task<IEnumerable<Genre>> GetGenresAsync();
 }

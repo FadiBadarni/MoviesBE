@@ -7,13 +7,16 @@ namespace MoviesBE.Services.TMDB;
 public class MovieDataService
 {
     private const int HomePageMovieLimit = 3;
+    private readonly IGenreRepository _genreRepository;
     private readonly IMovieRepository _movieRepository;
     private readonly TmdbApiService _tmdbApiService;
 
-    public MovieDataService(TmdbApiService tmdbApiService, IMovieRepository movieRepository)
+    public MovieDataService(TmdbApiService tmdbApiService, IMovieRepository movieRepository,
+        IGenreRepository genreRepository)
     {
         _tmdbApiService = tmdbApiService;
         _movieRepository = movieRepository;
+        _genreRepository = genreRepository;
     }
 
     public async Task<Movie> GetMovieByIdAsync(int movieId)
@@ -93,5 +96,10 @@ public class MovieDataService
     public async Task<List<TopRatedMovie>> GetLimitedTopRatedMoviesAsync()
     {
         return await _movieRepository.GetLimitedTopRatedMoviesAsync(HomePageMovieLimit);
+    }
+
+    public async Task<IEnumerable<Genre>> GetGenresAsync()
+    {
+        return await _genreRepository.GetGenresAsync();
     }
 }

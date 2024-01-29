@@ -70,4 +70,11 @@ public class MoviesController : ControllerBase
         var movies = await _movieDataService.GetLimitedTopRatedMoviesAsync();
         return Ok(movies);
     }
+
+    [HttpGet("genres")]
+    public async Task<ActionResult<IEnumerable<Genre>>> GetGenres()
+    {
+        var genres = await _movieDataService.GetGenresAsync();
+        return Ok(genres);
+    }
 }
