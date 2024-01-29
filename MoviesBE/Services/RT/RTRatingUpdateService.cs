@@ -48,7 +48,7 @@ public class RTRatingUpdateService : BaseHostedService
                 }
 
                 // Generate the RT formatted title from the movie title
-                var formattedTitle = FormatTitleForRottenTomatoes(movie.Title);
+                var formattedTitle = movie.Title;
                 if (string.IsNullOrWhiteSpace(formattedTitle))
                 {
                     Logger.LogInformation(
@@ -94,10 +94,6 @@ public class RTRatingUpdateService : BaseHostedService
         }, StoppingToken).ConfigureAwait(false);
     }
 
-    private string FormatTitleForRottenTomatoes(string title)
-    {
-        return title.ToLowerInvariant().Replace(" ", "_");
-    }
 
     protected override TimeSpan GetInterval()
     {
