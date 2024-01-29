@@ -198,7 +198,7 @@ public class MovieRepository : IMovieRepository
             "IMDb" => "ORDER BY COALESCE(maxIMDbRating, 0) DESC, COALESCE(maxRTRating, 0) DESC, m.voteCount DESC",
             "RottenTomatoes" =>
                 "ORDER BY COALESCE(maxRTRating, 0) DESC, COALESCE(maxIMDbRating, 0) DESC, m.voteCount DESC",
-            "Popularity" => "ORDER BY m.popularity DESC, m.voteCount DESC",
+            "TMDB" => "ORDER BY m.voteAverage DESC, m.voteCount DESC",
             _ => "ORDER BY m.voteAverage DESC, m.voteCount DESC" // Default sorting
         };
 
