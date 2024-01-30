@@ -1,5 +1,6 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
+using MoviesBE.Repositories.Interfaces;
 
 namespace MoviesBE.Services.TMDB;
 
@@ -10,15 +11,18 @@ public class TmdbApiService
     private readonly HttpService _httpService;
     private readonly MovieBackdropService _movieBackdropService;
     private readonly MovieVideoOrganizerService _movieVideoOrganizerService;
+    private readonly IPaginationTrackerRepository _paginationTrackerRepository;
 
     public TmdbApiService(HttpService httpService, IConfiguration configuration,
-        MovieBackdropService movieBackdropService, MovieVideoOrganizerService movieVideoOrganizerService, CrewFilterService crewFilterService)
+        MovieBackdropService movieBackdropService, MovieVideoOrganizerService movieVideoOrganizerService,
+        CrewFilterService crewFilterService, IPaginationTrackerRepository paginationTrackerRepository)
     {
         _httpService = httpService;
         _baseUrl = configuration["TMDB:BaseUrl"] ?? throw new InvalidOperationException("Base URL is not configured.");
         _movieBackdropService = movieBackdropService;
         _movieVideoOrganizerService = movieVideoOrganizerService;
         _crewFilterService = crewFilterService;
+        _paginationTrackerRepository = paginationTrackerRepository;
     }
 
     public async Task<Movie?> FetchMovieFromTmdbAsync(int movieId)
@@ -49,8 +53,13 @@ public class TmdbApiService
 
     public async Task<List<Movie>> GetPopularMoviesAsync()
     {
+        var category = "TMDB_Popular";
+        var lastFetchedPage = await _paginationTrackerRepository.GetLastFetchedPageAsync(category);
+        var nextPage = lastFetchedPage + 1;
+
         var genresLookup = await GetGenresAsync();
-        var movieListResult = await _httpService.SendAndDeserializeAsync<MovieListResult>($"{_baseUrl}movie/popular");
+        var movieListResult =
+            await _httpService.SendAndDeserializeAsync<MovieListResult>($"{_baseUrl}movie/popular?page={nextPage}");
 
         if (movieListResult?.Results == null)
         {
@@ -71,6 +80,9 @@ public class TmdbApiService
 
             moviesWithGenres.Add(movie);
         }
+
+        // Update the tracker with the new page number
+        await _paginationTrackerRepository.UpdateLastFetchedPageAsync(category, nextPage);
 
         return moviesWithGenres;
     }
@@ -106,8 +118,13 @@ public class TmdbApiService
 
     public async Task<List<Movie>> GetTopRatedMoviesAsync()
     {
+        var category = "TMDB_TopRated";
+        var lastFetchedPage = await _paginationTrackerRepository.GetLastFetchedPageAsync(category);
+        var nextPage = lastFetchedPage + 1;
+
         var genresLookup = await GetGenresAsync();
-        var movieListResult = await _httpService.SendAndDeserializeAsync<MovieListResult>($"{_baseUrl}movie/top_rated");
+        var movieListResult =
+            await _httpService.SendAndDeserializeAsync<MovieListResult>($"{_baseUrl}movie/top_rated?page={nextPage}");
 
         if (movieListResult?.Results == null)
         {
@@ -128,6 +145,9 @@ public class TmdbApiService
 
             moviesWithGenres.Add(movie);
         }
+
+        // Update the tracker with the new page number
+        await _paginationTrackerRepository.UpdateLastFetchedPageAsync(category, nextPage);
 
         return moviesWithGenres;
     }
