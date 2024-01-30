@@ -14,6 +14,7 @@ public class MovieRepository : IMovieRepository
     private readonly IGenreRepository _genreRepository;
     private readonly ILogger<MovieRepository> _logger;
     private readonly IMLanguageRepository _mLanguageRepository;
+    private readonly IMovieCollectionRepository _movieCollectionRepository;
     private readonly IDriver _neo4JDriver;
     private readonly IPCompanyRepository _pCompanyRepository;
     private readonly IPCountryRepository _pCountryRepository;
@@ -26,7 +27,8 @@ public class MovieRepository : IMovieRepository
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
         ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository,
         IPCountryRepository pCountryRepository, IMLanguageRepository mLanguageRepository,
-        IMBackdropRepository backdropRepository, IMVideoRepository videoRepository, IRatingRepository ratingRepository)
+        IMBackdropRepository backdropRepository, IMVideoRepository videoRepository, IRatingRepository ratingRepository,
+        IMovieCollectionRepository movieCollectionRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
@@ -40,6 +42,7 @@ public class MovieRepository : IMovieRepository
         _backdropRepository = backdropRepository;
         _videoRepository = videoRepository;
         _ratingRepository = ratingRepository;
+        _movieCollectionRepository = movieCollectionRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -54,6 +57,11 @@ public class MovieRepository : IMovieRepository
                 if (movie.Genres != null)
                 {
                     await _genreRepository.SaveGenresAsync(movie, tx);
+                }
+
+                if (movie.BelongsToCollection != null)
+                {
+                    await _movieCollectionRepository.SaveMovieCollectionAsync(movie, tx);
                 }
 
                 if (movie.ProductionCompanies != null)

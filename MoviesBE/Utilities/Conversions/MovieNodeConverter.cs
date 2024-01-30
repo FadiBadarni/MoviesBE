@@ -58,6 +58,7 @@ public static class MovieNodeConverter
             Status = movieNode.Properties.GetValueOrDefault("status", string.Empty).As<string>(),
             VoteAverage = movieNode.Properties.GetValueOrDefault("voteAverage", 0.0).As<double>(),
 
+            BelongsToCollection = ExtractCollection(movieNode),
             Genres = ExtractGenres(movieNode),
             Backdrops = ExtractBackdrops(movieNode),
             Trailers = ExtractVideos(movieNode),
@@ -164,5 +165,22 @@ public static class MovieNodeConverter
         }
 
         return new List<Rating>();
+    }
+
+    private static MovieCollection ExtractCollection(IEntity movieNode)
+    {
+        if (movieNode.Properties.TryGetValue("collection", out var collectionValue) &&
+            collectionValue is IEntity collectionNode)
+        {
+            return new MovieCollection
+            {
+                Id = collectionNode.Properties["id"].As<int>(),
+                Name = collectionNode.Properties["name"].As<string>(),
+                PosterPath = collectionNode.Properties["posterPath"].As<string>(),
+                BackdropPath = collectionNode.Properties["backdropPath"].As<string>()
+            };
+        }
+
+        return null;
     }
 }
