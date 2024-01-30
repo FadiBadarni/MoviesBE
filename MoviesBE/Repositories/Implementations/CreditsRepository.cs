@@ -40,6 +40,23 @@ public class CreditsRepository : ICreditsRepository
         return new List<CastMember>();
     }
 
+    public async Task<List<CrewMember>> GetMovieCrewAsync(IAsyncQueryRunner tx, int movieId)
+    {
+        var cursor = await tx.RunAsync(
+            @"MATCH (m:Movie {id: $id})-[:HAS_CREW]->(crew:Crew)
+          RETURN COLLECT(DISTINCT crew) as crewMembers",
+            new { id = movieId });
+
+        if (await cursor.FetchAsync())
+        {
+            return cursor.Current["crewMembers"].As<List<INode>>()
+                .Select(CreditsNodeConverter.ConvertNodeToCrewMember)
+                .ToList();
+        }
+
+        return new List<CrewMember>();
+    }
+
     private async Task SaveCastAsync(IEnumerable<CastMember> cast, int movieId, IAsyncQueryRunner tx)
     {
         // Detach old cast relationships
