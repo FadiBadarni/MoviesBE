@@ -374,6 +374,58 @@ public class MovieRepository : IMovieRepository
         return (movies, totalCount);
     }
 
+    public async Task<IEnumerable<Movie>> GetMoviesByGenreAsync(int genreId)
+    {
+        var movies = new List<Movie>();
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var query = @"MATCH (m:Movie)-[:HAS_GENRE]->(g:Genre {id: $genreId})
+                  RETURN m";
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(query, new { genreId });
+            while (await cursor.FetchAsync())
+            {
+                var movieNode = cursor.Current["m"].As<INode>();
+                var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
+
+                var genresTask = _genreRepository.GetMovieGenresAsync(tx, movie.Id);
+                var companiesTask = _pCompanyRepository.GetMovieProductionCompaniesAsync(tx, movie.Id);
+                var countriesTask = _pCountryRepository.GetMovieProductionCountriesAsync(tx, movie.Id);
+                var languagesTask = _mLanguageRepository.GetMovieSpokenLanguagesAsync(tx, movie.Id);
+                var backdropsTask = _backdropRepository.GetMovieBackdropsAsync(tx, movie.Id);
+                var videosTask = _videoRepository.GetMovieVideosAsync(tx, movie.Id);
+                var ratingsTask = _ratingRepository.GetMovieRatingsAsync(tx, movie.Id);
+                var castTask = _creditsRepository.GetMovieCastAsync(tx, movie.Id);
+                var crewTask = _creditsRepository.GetMovieCrewAsync(tx, movie.Id);
+
+                await Task.WhenAll(genresTask, companiesTask, countriesTask, languagesTask, backdropsTask, videosTask,
+                    ratingsTask, castTask, crewTask);
+
+                movie.Genres = await genresTask;
+                movie.ProductionCompanies = await companiesTask;
+                movie.ProductionCountries = await countriesTask;
+                movie.SpokenLanguages = await languagesTask;
+                movie.Backdrops = await backdropsTask;
+                movie.Trailers = await videosTask;
+                movie.Ratings = await ratingsTask;
+                movie.Credits = new Credits
+                {
+                    Id = movie.Id,
+                    Cast = await castTask,
+                    Crew = await crewTask
+                };
+
+                movies.Add(movie);
+            }
+
+            return movies;
+        });
+
+        return result;
+    }
+
 
     private async Task<List<TopRatedMovie>> FetchTopRatedMoviesAsync(int? limit = null)
     {

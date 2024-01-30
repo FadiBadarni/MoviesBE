@@ -20,4 +20,5 @@ public interface IMovieRepository
     Task<List<Movie>> GetAllMoviesAsync();
     Task<List<PopularMovie>> GetLimitedPopularMoviesAsync(int limit);
     Task<List<TopRatedMovie>> GetLimitedTopRatedMoviesAsync(int limit);
+    Task<IEnumerable<Movie>> GetMoviesByGenreAsync(int genreId);
 }
