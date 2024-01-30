@@ -25,20 +25,31 @@ public class CreditsRepository : ICreditsRepository
     public async Task<List<CastMember>> GetMovieCastAsync(IAsyncQueryRunner tx, int movieId)
     {
         var cursor = await tx.RunAsync(
-            @"MATCH (m:Movie {id: $id})-[:HAS_CAST]->(cast:Cast)
-          RETURN COLLECT(DISTINCT cast) as castMembers",
+            @"MATCH (m:Movie {id: $id})-[r:HAS_CAST]->(cast:Cast)
+          RETURN cast, r.character AS character, r.creditId AS creditId, r.order AS order
+          ORDER BY cast.popularity DESC
+          LIMIT 10",
             new { id = movieId });
 
-        if (await cursor.FetchAsync())
+        var castMembers = new List<CastMember>();
+        while (await cursor.FetchAsync())
         {
-            return cursor.Current["castMembers"].As<List<INode>>()
-                .Select(CreditsNodeConverter.ConvertNodeToCastMember)
-                .OrderByDescending(c => c.Popularity) // Sort by popularity
-                .ToList();
+            var castNode = cursor.Current["cast"].As<INode>();
+            var character = cursor.Current["character"].As<string>();
+            var creditId = cursor.Current["creditId"].As<string>();
+            var order = cursor.Current["order"].As<int>();
+
+            var castMember = CreditsNodeConverter.ConvertNodeToCastMember(castNode);
+            castMember.Character = character;
+            castMember.CreditId = creditId;
+            castMember.Order = order;
+
+            castMembers.Add(castMember);
         }
 
-        return new List<CastMember>();
+        return castMembers;
     }
+
 
     public async Task<List<CrewMember>> GetMovieCrewAsync(IAsyncQueryRunner tx, int movieId)
     {

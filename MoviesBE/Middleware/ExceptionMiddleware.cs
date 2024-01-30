@@ -25,7 +25,8 @@ public class ExceptionMiddleware
         catch (Exception ex)
         {
             _logger.LogError("An error occurred: {ExceptionType} - {Message} - Request: {Method} {Url}",
-                ex.GetType().Name, ex.Message, context.Request.Method, context.Request.Path);
+                ex.GetType().Name, ex.InnerException?.Message ?? ex.Message, context.Request.Method,
+                context.Request.Path);
 
             _logger.LogDebug(ex, "Full exception details");
 

@@ -29,11 +29,11 @@ public class CastMember
     public int CastId { get; init; }
 
     [JsonPropertyName("character")]
-    public string? Character { get; init; }
+    public string? Character { get; set; }
 
     [JsonPropertyName("credit_id")]
-    public string? CreditId { get; init; }
+    public string? CreditId { get; set; }
 
     [JsonPropertyName("order")]
-    public int Order { get; init; }
+    public int Order { get; set; }
 }

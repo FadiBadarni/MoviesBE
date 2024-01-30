@@ -16,10 +16,7 @@ public static class CreditsNodeConverter
             Name = node.Properties.GetValueOrDefault("name", string.Empty).As<string>(),
             Popularity = node.Properties.GetValueOrDefault("popularity", 0.0).As<double>(),
             ProfilePath = node.Properties.GetValueOrDefault("profilePath", null).As<string>(),
-            CastId = node.Properties.GetValueOrDefault("castId", 0).As<int>(),
-            Character = node.Properties.GetValueOrDefault("character", string.Empty).As<string>(),
-            CreditId = node.Properties.GetValueOrDefault("creditId", string.Empty).As<string>(),
-            Order = node.Properties.GetValueOrDefault("order", 0).As<int>()
+            CastId = node.Properties.GetValueOrDefault("castId", 0).As<int>()
         };
     }
 
