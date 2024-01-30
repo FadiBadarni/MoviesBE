@@ -8,4 +8,6 @@ public interface IRatingRepository
     Task UpdateMovieRatingsAsync(int movieId, List<Rating> ratings);
 
     Task SaveMovieRatingsAsync(int movieId, List<Rating> ratings, IAsyncQueryRunner tx);
+
+    Task<List<Rating>> GetMovieRatingsAsync(IAsyncQueryRunner tx, int movieId);
 }

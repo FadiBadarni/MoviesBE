@@ -18,6 +18,7 @@ public class MovieRepository : IMovieRepository
     private readonly IPCompanyRepository _pCompanyRepository;
     private readonly IPCountryRepository _pCountryRepository;
     private readonly PopularityThresholdService _popularityThresholdService;
+    private readonly IRatingRepository _ratingRepository;
     private readonly RatingThresholdService _ratingThresholdService;
     private readonly IMVideoRepository _videoRepository;
 
@@ -25,7 +26,7 @@ public class MovieRepository : IMovieRepository
         RatingThresholdService ratingThresholdService, PopularityThresholdService popularityThresholdService,
         ILogger<MovieRepository> logger, IGenreRepository genreRepository, IPCompanyRepository pCompanyRepository,
         IPCountryRepository pCountryRepository, IMLanguageRepository mLanguageRepository,
-        IMBackdropRepository backdropRepository, IMVideoRepository videoRepository)
+        IMBackdropRepository backdropRepository, IMVideoRepository videoRepository, IRatingRepository ratingRepository)
     {
         _neo4JDriver = neo4JDriver;
         _creditsRepository = creditsRepository;
@@ -38,6 +39,7 @@ public class MovieRepository : IMovieRepository
         _mLanguageRepository = mLanguageRepository;
         _backdropRepository = backdropRepository;
         _videoRepository = videoRepository;
+        _ratingRepository = ratingRepository;
     }
 
     public async Task SaveMovieAsync(Movie movie)
@@ -98,9 +100,7 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                        OPTIONAL MATCH (m)-[:HAS_RATING]->(r:Rating)
-                        RETURN m, 
-                               COLLECT(DISTINCT r) as ratings",
+                        RETURN m",
                 new { id = movieId });
 
             if (await cursor.FetchAsync())
@@ -112,9 +112,7 @@ public class MovieRepository : IMovieRepository
                 var languages = await _mLanguageRepository.GetMovieSpokenLanguagesAsync(tx, movieId);
                 var backdrops = await _backdropRepository.GetMovieBackdropsAsync(tx, movieId);
                 var videos = await _videoRepository.GetMovieVideosAsync(tx, movieId);
-
-                var ratingsNodes = cursor.Current["ratings"].As<List<INode>>();
-                var ratings = ratingsNodes.Select(RatingNodeConverter.ConvertNodeToRating).ToList();
+                var ratings = await _ratingRepository.GetMovieRatingsAsync(tx, movieId);
 
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
                 movie.Genres = genres;

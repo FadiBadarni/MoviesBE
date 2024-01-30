@@ -1,5 +1,6 @@
 ﻿using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Repositories.Implementations;
@@ -36,5 +37,22 @@ public class RatingRepository : IRatingRepository
                 score = rating.Score
             });
         }
+    }
+
+    public async Task<List<Rating>> GetMovieRatingsAsync(IAsyncQueryRunner tx, int movieId)
+    {
+        var cursor = await tx.RunAsync(
+            @"MATCH (m:Movie {id: $id})-[:HAS_RATING]->(r:Rating)
+              RETURN COLLECT(DISTINCT r) as ratings",
+            new { id = movieId });
+
+        if (await cursor.FetchAsync())
+        {
+            return cursor.Current["ratings"].As<List<INode>>()
+                .Select(RatingNodeConverter.ConvertNodeToRating)
+                .ToList();
+        }
+
+        return new List<Rating>();
     }
 }
