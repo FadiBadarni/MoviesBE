@@ -98,7 +98,6 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                        OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
                         OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
                         OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
                         OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
@@ -107,7 +106,6 @@ public class MovieRepository : IMovieRepository
                         OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
                         OPTIONAL MATCH (m)-[:HAS_RATING]->(r:Rating)
                         RETURN m, 
-                               COLLECT(DISTINCT c) as companies,
                                COLLECT(DISTINCT pc) as countries, 
                                COLLECT(DISTINCT sl) as languages,
                                COLLECT(DISTINCT b) as backdrops, 
@@ -121,9 +119,8 @@ public class MovieRepository : IMovieRepository
             {
                 var movieNode = cursor.Current["m"].As<INode>();
                 var genres = await _genreRepository.GetMovieGenresAsync(tx, movieId);
+                var companies = await _pCompanyRepository.GetMovieProductionCompaniesAsync(tx, movieId);
 
-                var companies = cursor.Current["companies"].As<List<INode>>()
-                    .Select(CompanyNodeConverter.ConvertNodeToCompany).ToList();
                 var countries = cursor.Current["countries"].As<List<INode>>()
                     .Select(CountryNodeConverter.ConvertNodeToCountry).ToList();
                 var languages = cursor.Current["languages"].As<List<INode>>()

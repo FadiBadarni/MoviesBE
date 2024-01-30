@@ -1,5 +1,6 @@
 ﻿using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Repositories.Implementations;
@@ -33,5 +34,20 @@ public class PCompanyRepository : IPCompanyRepository
                     id = company.Id, name = company.Name, logoPath = company.LogoPath,
                     originCountry = company.OriginCountry, movieId = movie.Id
                 });
+    }
+
+    public async Task<List<ProductionCompany>> GetMovieProductionCompaniesAsync(IAsyncQueryRunner tx, int movieId)
+    {
+        var cursor = await tx.RunAsync(
+            @"MATCH (m:Movie)-[:PRODUCED_BY]->(c:Company) WHERE m.id = $id RETURN COLLECT(DISTINCT c) as companies",
+            new { id = movieId });
+
+        if (await cursor.FetchAsync())
+        {
+            return cursor.Current["companies"].As<List<INode>>()
+                .Select(CompanyNodeConverter.ConvertNodeToCompany).ToList();
+        }
+
+        return new List<ProductionCompany>();
     }
 }
