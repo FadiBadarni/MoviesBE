@@ -120,9 +120,8 @@ public class MovieRepository : IMovieRepository
                 var movieNode = cursor.Current["m"].As<INode>();
                 var genres = await _genreRepository.GetMovieGenresAsync(tx, movieId);
                 var companies = await _pCompanyRepository.GetMovieProductionCompaniesAsync(tx, movieId);
+                var countries = await _pCountryRepository.GetMovieProductionCountriesAsync(tx, movieId);
 
-                var countries = cursor.Current["countries"].As<List<INode>>()
-                    .Select(CountryNodeConverter.ConvertNodeToCountry).ToList();
                 var languages = cursor.Current["languages"].As<List<INode>>()
                     .Select(LanguageNodeConverter.ConvertNodeToLanguage).ToList();
 

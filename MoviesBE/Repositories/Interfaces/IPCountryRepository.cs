@@ -6,4 +6,5 @@ namespace MoviesBE.Repositories.Interfaces;
 public interface IPCountryRepository
 {
     Task SaveProductionCountriesAsync(Movie movie, IAsyncQueryRunner tx);
+    Task<List<ProductionCountry>> GetMovieProductionCountriesAsync(IAsyncQueryRunner tx, int movieId);
 }
