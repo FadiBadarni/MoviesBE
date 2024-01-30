@@ -98,7 +98,6 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                        OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
                         OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
                         OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
                         OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
@@ -106,7 +105,6 @@ public class MovieRepository : IMovieRepository
                         OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
                         OPTIONAL MATCH (m)-[:HAS_RATING]->(r:Rating)
                         RETURN m, 
-                               COLLECT(DISTINCT pc) as countries, 
                                COLLECT(DISTINCT sl) as languages,
                                COLLECT(DISTINCT b) as backdrops, 
                                COLLECT(DISTINCT v) as videos,
@@ -121,9 +119,7 @@ public class MovieRepository : IMovieRepository
                 var genres = await _genreRepository.GetMovieGenresAsync(tx, movieId);
                 var companies = await _pCompanyRepository.GetMovieProductionCompaniesAsync(tx, movieId);
                 var countries = await _pCountryRepository.GetMovieProductionCountriesAsync(tx, movieId);
-
-                var languages = cursor.Current["languages"].As<List<INode>>()
-                    .Select(LanguageNodeConverter.ConvertNodeToLanguage).ToList();
+                var languages = await _mLanguageRepository.GetMovieSpokenLanguagesAsync(tx, movieId);
 
                 const double bannerAspectRatio = 1.78;
                 var backdrops = cursor.Current["backdrops"].As<List<INode>>()

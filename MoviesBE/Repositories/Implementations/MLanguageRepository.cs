@@ -1,5 +1,6 @@
 ﻿using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Repositories.Implementations;
@@ -35,5 +36,20 @@ public class MLanguageRepository : IMLanguageRepository
                     englishName = language.EnglishName,
                     movieId = movie.Id
                 });
+    }
+
+    public async Task<List<SpokenLanguage>> GetMovieSpokenLanguagesAsync(IAsyncQueryRunner tx, int movieId)
+    {
+        var cursor = await tx.RunAsync(
+            @"MATCH (m:Movie)-[:HAS_LANGUAGE]->(sl:Language) WHERE m.id = $id RETURN COLLECT(DISTINCT sl) as languages",
+            new { id = movieId });
+
+        if (await cursor.FetchAsync())
+        {
+            return cursor.Current["languages"].As<List<INode>>()
+                .Select(LanguageNodeConverter.ConvertNodeToLanguage).ToList();
+        }
+
+        return new List<SpokenLanguage>();
     }
 }
