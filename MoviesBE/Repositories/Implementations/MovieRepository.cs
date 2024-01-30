@@ -98,36 +98,39 @@ public class MovieRepository : IMovieRepository
         await using var session = _neo4JDriver.AsyncSession();
         return await session.ExecuteReadAsync(async tx =>
         {
-            var cursor = await tx.RunAsync(
-                @"MATCH (m:Movie {id: $id})
-                        RETURN m",
-                new { id = movieId });
+            var cursor = await tx.RunAsync(@"MATCH (m:Movie {id: $id}) RETURN m", new { id = movieId });
 
             if (await cursor.FetchAsync())
             {
                 var movieNode = cursor.Current["m"].As<INode>();
-                var genres = await _genreRepository.GetMovieGenresAsync(tx, movieId);
-                var companies = await _pCompanyRepository.GetMovieProductionCompaniesAsync(tx, movieId);
-                var countries = await _pCountryRepository.GetMovieProductionCountriesAsync(tx, movieId);
-                var languages = await _mLanguageRepository.GetMovieSpokenLanguagesAsync(tx, movieId);
-                var backdrops = await _backdropRepository.GetMovieBackdropsAsync(tx, movieId);
-                var videos = await _videoRepository.GetMovieVideosAsync(tx, movieId);
-                var ratings = await _ratingRepository.GetMovieRatingsAsync(tx, movieId);
+
+                var genresTask = _genreRepository.GetMovieGenresAsync(tx, movieId);
+                var companiesTask = _pCompanyRepository.GetMovieProductionCompaniesAsync(tx, movieId);
+                var countriesTask = _pCountryRepository.GetMovieProductionCountriesAsync(tx, movieId);
+                var languagesTask = _mLanguageRepository.GetMovieSpokenLanguagesAsync(tx, movieId);
+                var backdropsTask = _backdropRepository.GetMovieBackdropsAsync(tx, movieId);
+                var videosTask = _videoRepository.GetMovieVideosAsync(tx, movieId);
+                var ratingsTask = _ratingRepository.GetMovieRatingsAsync(tx, movieId);
+                var castTask = _creditsRepository.GetMovieCastAsync(tx, movieId);
+                var crewTask = _creditsRepository.GetMovieCrewAsync(tx, movieId);
+
+                await Task.WhenAll(genresTask, companiesTask, countriesTask, languagesTask, backdropsTask, videosTask,
+                    ratingsTask, castTask, crewTask);
 
                 var movie = MovieNodeConverter.ConvertNodeToMovie(movieNode);
-                movie.Genres = genres;
-                movie.ProductionCompanies = companies;
-                movie.ProductionCountries = countries;
-                movie.SpokenLanguages = languages;
-                movie.Backdrops = backdrops;
-                movie.Trailers = videos;
+                movie.Genres = await genresTask;
+                movie.ProductionCompanies = await companiesTask;
+                movie.ProductionCountries = await countriesTask;
+                movie.SpokenLanguages = await languagesTask;
+                movie.Backdrops = await backdropsTask;
+                movie.Trailers = await videosTask;
+                movie.Ratings = await ratingsTask;
                 movie.Credits = new Credits
                 {
                     Id = movieId,
-                    Cast = await _creditsRepository.GetMovieCastAsync(tx, movieId),
-                    Crew = await _creditsRepository.GetMovieCrewAsync(tx, movieId)
+                    Cast = await castTask,
+                    Crew = await crewTask
                 };
-                movie.Ratings = ratings;
 
                 return movie;
             }
@@ -135,7 +138,6 @@ public class MovieRepository : IMovieRepository
             return null;
         });
     }
-
 
     public async Task<List<PopularMovie>> GetLimitedPopularMoviesAsync(int limit = 3)
     {
