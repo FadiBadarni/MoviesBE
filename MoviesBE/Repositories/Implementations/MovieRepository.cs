@@ -98,7 +98,6 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                        OPTIONAL MATCH (m)-[:HAS_GENRE]->(g:Genre)
                         OPTIONAL MATCH (m)-[:PRODUCED_BY]->(c:Company)
                         OPTIONAL MATCH (m)-[:PRODUCED_IN]->(pc:Country)
                         OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
@@ -108,7 +107,6 @@ public class MovieRepository : IMovieRepository
                         OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
                         OPTIONAL MATCH (m)-[:HAS_RATING]->(r:Rating)
                         RETURN m, 
-                               COLLECT(DISTINCT g) as genres, 
                                COLLECT(DISTINCT c) as companies,
                                COLLECT(DISTINCT pc) as countries, 
                                COLLECT(DISTINCT sl) as languages,
@@ -122,8 +120,8 @@ public class MovieRepository : IMovieRepository
             if (await cursor.FetchAsync())
             {
                 var movieNode = cursor.Current["m"].As<INode>();
-                var genres = cursor.Current["genres"].As<List<INode>>()
-                    .Select(GenreNodeConverter.ConvertNodeToGenre).ToList();
+                var genres = await _genreRepository.GetMovieGenresAsync(tx, movieId);
+
                 var companies = cursor.Current["companies"].As<List<INode>>()
                     .Select(CompanyNodeConverter.ConvertNodeToCompany).ToList();
                 var countries = cursor.Current["countries"].As<List<INode>>()
@@ -174,6 +172,7 @@ public class MovieRepository : IMovieRepository
             return null;
         });
     }
+
 
     public async Task<List<PopularMovie>> GetLimitedPopularMoviesAsync(int limit = 3)
     {
