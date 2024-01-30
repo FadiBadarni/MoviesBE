@@ -1,5 +1,6 @@
 ﻿using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Repositories.Implementations;
@@ -19,6 +20,24 @@ public class CreditsRepository : ICreditsRepository
         {
             await SaveCrewAsync(credits.Crew, movieId, tx);
         }
+    }
+
+    public async Task<List<CastMember>> GetMovieCastAsync(IAsyncQueryRunner tx, int movieId)
+    {
+        var cursor = await tx.RunAsync(
+            @"MATCH (m:Movie {id: $id})-[:HAS_CAST]->(cast:Cast)
+          RETURN COLLECT(DISTINCT cast) as castMembers",
+            new { id = movieId });
+
+        if (await cursor.FetchAsync())
+        {
+            return cursor.Current["castMembers"].As<List<INode>>()
+                .Select(CreditsNodeConverter.ConvertNodeToCastMember)
+                .OrderByDescending(c => c.Popularity) // Sort by popularity
+                .ToList();
+        }
+
+        return new List<CastMember>();
     }
 
     private async Task SaveCastAsync(IEnumerable<CastMember> cast, int movieId, IAsyncQueryRunner tx)

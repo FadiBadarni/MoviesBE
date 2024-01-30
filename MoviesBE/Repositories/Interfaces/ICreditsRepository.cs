@@ -6,4 +6,6 @@ namespace MoviesBE.Repositories.Interfaces;
 public interface ICreditsRepository
 {
     Task SaveCreditsAsync(Credits credits, IAsyncQueryRunner tx);
+
+    Task<List<CastMember>> GetMovieCastAsync(IAsyncQueryRunner tx, int movieId);
 }
