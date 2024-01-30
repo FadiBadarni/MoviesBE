@@ -1,5 +1,6 @@
 ﻿using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Repositories.Implementations;
@@ -42,5 +43,20 @@ public class MVideoRepository : IMVideoRepository
                     size = video.Size,
                     movieId = movie.Id
                 });
+    }
+
+    public async Task<List<MovieVideo>> GetMovieVideosAsync(IAsyncQueryRunner tx, int movieId)
+    {
+        var cursor = await tx.RunAsync(
+            @"MATCH (m:Movie)-[:HAS_VIDEO]->(v:Video) WHERE m.id = $id RETURN COLLECT(DISTINCT v) as videos",
+            new { id = movieId });
+
+        if (await cursor.FetchAsync())
+        {
+            return cursor.Current["videos"].As<List<INode>>()
+                .Select(MovieVideoNodeConverter.ConvertNodeToVideo).ToList();
+        }
+
+        return new List<MovieVideo>();
     }
 }

@@ -98,12 +98,10 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                        OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
                         OPTIONAL MATCH (m)-[:HAS_CAST]->(cast:Cast)
                         OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
                         OPTIONAL MATCH (m)-[:HAS_RATING]->(r:Rating)
                         RETURN m, 
-                               COLLECT(DISTINCT v) as videos,
                                COLLECT(DISTINCT cast) as castMembers, 
                                COLLECT(DISTINCT crew) as crewMembers,
                                COLLECT(DISTINCT r) as ratings",
@@ -117,9 +115,7 @@ public class MovieRepository : IMovieRepository
                 var countries = await _pCountryRepository.GetMovieProductionCountriesAsync(tx, movieId);
                 var languages = await _mLanguageRepository.GetMovieSpokenLanguagesAsync(tx, movieId);
                 var backdrops = await _backdropRepository.GetMovieBackdropsAsync(tx, movieId);
-
-                var videos = cursor.Current["videos"].As<List<INode>>()
-                    .Select(MovieVideoNodeConverter.ConvertNodeToVideo).ToList();
+                var videos = await _videoRepository.GetMovieVideosAsync(tx, movieId);
 
                 var castNodes = cursor.Current["castMembers"].As<List<INode>>();
                 var crewNodes = cursor.Current["crewMembers"].As<List<INode>>();

@@ -6,4 +6,5 @@ namespace MoviesBE.Repositories.Interfaces;
 public interface IMVideoRepository
 {
     Task SaveMovieVideosAsync(Movie movie, IAsyncQueryRunner tx);
+    Task<List<MovieVideo>> GetMovieVideosAsync(IAsyncQueryRunner tx, int movieId);
 }
