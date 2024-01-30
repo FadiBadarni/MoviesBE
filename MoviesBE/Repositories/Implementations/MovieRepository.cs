@@ -98,15 +98,11 @@ public class MovieRepository : IMovieRepository
         {
             var cursor = await tx.RunAsync(
                 @"MATCH (m:Movie {id: $id})
-                        OPTIONAL MATCH (m)-[:HAS_LANGUAGE]->(sl:Language)
-                        OPTIONAL MATCH (m)-[:HAS_BACKDROP]->(b:Backdrop)
                         OPTIONAL MATCH (m)-[:HAS_VIDEO]->(v:Video)
                         OPTIONAL MATCH (m)-[:HAS_CAST]->(cast:Cast)
                         OPTIONAL MATCH (m)-[:HAS_CREW]->(crew:Crew)
                         OPTIONAL MATCH (m)-[:HAS_RATING]->(r:Rating)
                         RETURN m, 
-                               COLLECT(DISTINCT sl) as languages,
-                               COLLECT(DISTINCT b) as backdrops, 
                                COLLECT(DISTINCT v) as videos,
                                COLLECT(DISTINCT cast) as castMembers, 
                                COLLECT(DISTINCT crew) as crewMembers,
@@ -120,14 +116,7 @@ public class MovieRepository : IMovieRepository
                 var companies = await _pCompanyRepository.GetMovieProductionCompaniesAsync(tx, movieId);
                 var countries = await _pCountryRepository.GetMovieProductionCountriesAsync(tx, movieId);
                 var languages = await _mLanguageRepository.GetMovieSpokenLanguagesAsync(tx, movieId);
-
-                const double bannerAspectRatio = 1.78;
-                var backdrops = cursor.Current["backdrops"].As<List<INode>>()
-                    .Select(BackdropNodeConverter.ConvertNodeToBackdrop)
-                    .OrderByDescending(b =>
-                        Math.Abs(b.AspectRatio - bannerAspectRatio)) // Prioritize banner-like aspect ratio
-                    .ThenByDescending(b => b.Width * b.Height) // Then by size
-                    .ToList();
+                var backdrops = await _backdropRepository.GetMovieBackdropsAsync(tx, movieId);
 
                 var videos = cursor.Current["videos"].As<List<INode>>()
                     .Select(MovieVideoNodeConverter.ConvertNodeToVideo).ToList();

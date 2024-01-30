@@ -1,5 +1,6 @@
 ﻿using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Repositories.Implementations;
@@ -45,5 +46,26 @@ public class MBackdropRepository : IMBackdropRepository
                     height = backdrop.Height,
                     movieId = movie.Id
                 });
+    }
+
+    public async Task<List<MovieBackdrop>> GetMovieBackdropsAsync(IAsyncQueryRunner tx, int movieId)
+    {
+        const double bannerAspectRatio = 1.78;
+
+        var cursor = await tx.RunAsync(
+            @"MATCH (m:Movie)-[:HAS_BACKDROP]->(b:Backdrop) WHERE m.id = $id RETURN COLLECT(DISTINCT b) as backdrops",
+            new { id = movieId });
+
+        if (await cursor.FetchAsync())
+        {
+            return cursor.Current["backdrops"].As<List<INode>>()
+                .Select(BackdropNodeConverter.ConvertNodeToBackdrop)
+                .OrderByDescending(b =>
+                    Math.Abs(b.AspectRatio - bannerAspectRatio)) // Prioritize banner-like aspect ratio
+                .ThenByDescending(b => b.Width * b.Height) // Then by size
+                .ToList();
+        }
+
+        return new List<MovieBackdrop>();
     }
 }
