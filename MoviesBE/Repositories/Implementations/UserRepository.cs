@@ -1,6 +1,6 @@
-﻿using MoviesBE.DTOs;
-using MoviesBE.Entities;
+﻿using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 using Neo4j.Driver;
 
 namespace MoviesBE.Repositories.Implementations;
@@ -41,7 +41,7 @@ public class UserRepository : IUserRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding or updating user.");
-            throw; // Consider throwing a custom exception
+            throw;
         }
     }
 
@@ -79,29 +79,15 @@ public class UserRepository : IUserRepository
         };
     }
 
-    private async Task<User?> FindUserByAuth0Id(IAsyncQueryRunner tx, string auth0Id)
+    private static async Task<User?> FindUserByAuth0Id(IAsyncQueryRunner tx, string auth0Id)
     {
         var cursor = await tx.RunAsync("MATCH (u:User {auth0Id: $auth0Id}) RETURN u", new { auth0Id });
         if (await cursor.FetchAsync())
         {
             var userNode = cursor.Current["u"].As<INode>();
-            return ConvertNodeToUser(userNode);
+            return UserNodeConverter.ConvertNodeToUser(userNode);
         }
 
         return null;
-    }
-
-    private User ConvertNodeToUser(INode node)
-    {
-        return new User
-        {
-            Auth0Id = node.Properties["auth0Id"].As<string>(),
-            Email = node.Properties["email"].As<string>(),
-            FullName = node.Properties["fullName"].As<string>(),
-            ProfilePicture = node.Properties["profilePicture"].As<string>(),
-            EmailVerified = node.Properties["emailVerified"].As<bool>(),
-            Role = Enum.Parse<Role>(node.Properties["role"].As<string>()),
-            Language = node.Properties["language"].As<string>()
-        };
     }
 }
