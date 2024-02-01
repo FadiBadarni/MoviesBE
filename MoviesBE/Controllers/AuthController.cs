@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MoviesBE.Services.User;
+using MoviesBE.Services.UserService;
 
 namespace MoviesBE.Controllers;
 

@@ -1,13 +1,14 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using MoviesBE.DTOs;
+using MoviesBE.Exceptions;
 
 namespace MoviesBE.Services.User;
 
 public class Auth0Client
 {
     private readonly HttpClient _httpClient;
-    private readonly string _userInfoEndpoint;
+    private readonly string? _userInfoEndpoint;
 
     public Auth0Client(HttpClient httpClient, IConfiguration configuration)
     {
@@ -29,6 +30,7 @@ public class Auth0Client
             return userInfo ?? throw new InvalidOperationException("User info deserialization failed.");
         }
 
-        throw new HttpRequestException($"Error retrieving user info from Auth0. Status Code: {response.StatusCode}");
+        var errorMessage = $"Error retrieving user info from Auth0. Status Code: {response.StatusCode}";
+        throw new UserInfoException(errorMessage, response.StatusCode);
     }
 }

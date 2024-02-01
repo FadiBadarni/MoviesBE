@@ -87,6 +87,13 @@ public class ExceptionMiddleware
                     StatusCode = context.Response.StatusCode,
                     Message = "A database error occurred."
                 }.ToString());
+            case UserInfoException userInfoException:
+                context.Response.StatusCode = (int)userInfoException.StatusCode;
+                return context.Response.WriteAsync(new ErrorDetails
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = userInfoException.Message
+                }.ToString());
 
 
             // TODO: handle other exception types ...

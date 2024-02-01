@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using MoviesBE.DTOs;
 
 namespace MoviesBE.Entities;
 
@@ -21,9 +22,4 @@ public class User
     public Role Role { get; set; }
 
     public string? Language { get; set; }
-}
-
-public enum Role
-{
-    User
 }

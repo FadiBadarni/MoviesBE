@@ -10,6 +10,7 @@ using MoviesBE.Services.IMDB;
 using MoviesBE.Services.RT;
 using MoviesBE.Services.TMDB;
 using MoviesBE.Services.User;
+using MoviesBE.Services.UserService;
 using Neo4j.Driver;
 
 var builder = WebApplication.CreateBuilder(args);

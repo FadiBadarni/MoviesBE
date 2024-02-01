@@ -1,8 +1,9 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
 using MoviesBE.Repositories.Implementations;
+using MoviesBE.Services.User;
 
-namespace MoviesBE.Services.User;
+namespace MoviesBE.Services.UserService;
 
 public class UserService
 {
@@ -47,7 +48,7 @@ public class UserService
         existingUser.EmailVerified = userInfo.EmailVerified;
     }
 
-    private Entities.User MapUserInfoToUser(UserInfo userInfo)
+    private static Entities.User MapUserInfoToUser(UserInfo userInfo)
     {
         // Create a new User entity from UserInfo
         return new Entities.User
@@ -64,14 +65,29 @@ public class UserService
 
     private string GetAccessTokenFromHttpContext()
     {
-        var httpContext = _httpContextAccessor.HttpContext;
-        var authorizationHeader = httpContext.Request.Headers["Authorization"].ToString();
+        const string bearerPrefix = "Bearer ";
 
-        if (!string.IsNullOrEmpty(authorizationHeader) && authorizationHeader.StartsWith("Bearer "))
+        var httpContext = _httpContextAccessor.HttpContext
+                          ?? throw new InvalidOperationException("HttpContext is not available.");
+
+        if (!httpContext.Request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues)
+            || string.IsNullOrWhiteSpace(authorizationHeaderValues))
         {
-            return authorizationHeader.Substring("Bearer ".Length).Trim();
+            throw new InvalidOperationException("Authorization header is missing.");
         }
 
-        throw new InvalidOperationException("No access token found in the HTTP context.");
+        var authorizationHeader = authorizationHeaderValues.ToString();
+        if (!authorizationHeader.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Invalid authorization header format.");
+        }
+
+        var token = authorizationHeader[bearerPrefix.Length..].Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException("Access token is missing in the authorization header.");
+        }
+
+        return token;
     }
 }
