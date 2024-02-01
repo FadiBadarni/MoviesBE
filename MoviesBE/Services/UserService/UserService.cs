@@ -43,27 +43,11 @@ public class UserService
             throw new UserRegistrationException("Auth0 ID is missing in the user information.");
         }
 
-        var existingUser = await _userRepository.FindByAuth0IdAsync(userInfo.Sub);
-        if (existingUser != null)
-        {
-            UpdateExistingUser(existingUser, userInfo);
-            await _userRepository.UpdateAsync(existingUser);
-            return existingUser;
-        }
+        var user = MapUserInfoToUser(userInfo);
 
-        var newUser = MapUserInfoToUser(userInfo);
-        await _userRepository.AddAsync(newUser);
-        return newUser;
-    }
+        await _userRepository.AddOrUpdateAsync(user);
 
-
-    private void UpdateExistingUser(User existingUser, UserInfo userInfo)
-    {
-        existingUser.Email = userInfo.Email;
-        existingUser.FullName = userInfo.Name;
-        existingUser.ProfilePicture = userInfo.Picture;
-        existingUser.EmailVerified = userInfo.EmailVerified;
-        existingUser.Language = userInfo.Locale;
+        return user;
     }
 
     private static User MapUserInfoToUser(UserInfo userInfo)

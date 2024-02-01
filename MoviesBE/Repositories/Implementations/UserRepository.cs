@@ -31,47 +31,52 @@ public class UserRepository : IUserRepository
         }
     }
 
-    public async Task UpdateAsync(User user)
+    public async Task AddOrUpdateAsync(User user)
     {
         await using var session = _neo4JDriver.AsyncSession();
-        await session.ExecuteWriteAsync(async tx =>
+        try
         {
-            await tx.RunAsync("MATCH (u:User {auth0Id: $auth0Id}) " +
-                              "SET u.email = $email, u.fullName = $fullName, " +
-                              "u.profilePicture = $profilePicture, u.emailVerified = $emailVerified, " +
-                              "u.role = $role, u.language = $language",
-                new
-                {
-                    auth0Id = user.Auth0Id,
-                    email = user.Email,
-                    fullName = user.FullName,
-                    profilePicture = user.ProfilePicture,
-                    emailVerified = user.EmailVerified,
-                    role = user.Role.ToString(),
-                    language = user.Language
-                });
-        });
+            await session.ExecuteWriteAsync(tx => MergeUser(tx, user));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding or updating user.");
+            throw; // Consider throwing a custom exception
+        }
     }
 
-    public async Task AddAsync(User user)
+    private async Task MergeUser(IAsyncQueryRunner tx, User user)
     {
-        await using var session = _neo4JDriver.AsyncSession();
-        await session.ExecuteWriteAsync(async tx =>
+        var query = @"MERGE (u:User {auth0Id: $auth0Id})
+                      ON CREATE SET
+                        u.email = $email, 
+                        u.fullName = $fullName, 
+                        u.profilePicture = $profilePicture, 
+                        u.emailVerified = $emailVerified, 
+                        u.role = $role, 
+                        u.language = $language
+                      ON MATCH SET
+                        u.email = $email, 
+                        u.fullName = $fullName, 
+                        u.profilePicture = $profilePicture, 
+                        u.emailVerified = $emailVerified, 
+                        u.role = $role, 
+                        u.language = $language";
+        await tx.RunAsync(query, GetUserParameters(user));
+    }
+
+    private static object GetUserParameters(User user)
+    {
+        return new
         {
-            await tx.RunAsync("CREATE (u:User {auth0Id: $auth0Id, email: $email, fullName: $fullName, " +
-                              "profilePicture: $profilePicture, emailVerified: $emailVerified, role: $role, " +
-                              "language: $language})",
-                new
-                {
-                    auth0Id = user.Auth0Id,
-                    email = user.Email,
-                    fullName = user.FullName,
-                    profilePicture = user.ProfilePicture,
-                    emailVerified = user.EmailVerified,
-                    role = user.Role.ToString(),
-                    language = user.Language
-                });
-        });
+            auth0Id = user.Auth0Id,
+            email = user.Email,
+            fullName = user.FullName,
+            profilePicture = user.ProfilePicture,
+            emailVerified = user.EmailVerified,
+            role = user.Role.ToString(),
+            language = user.Language
+        };
     }
 
     private async Task<User?> FindUserByAuth0Id(IAsyncQueryRunner tx, string auth0Id)
