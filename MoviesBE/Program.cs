@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using MoviesBE.Middleware;
 using MoviesBE.Repositories.Implementations;
 using MoviesBE.Repositories.Interfaces;
@@ -7,6 +9,7 @@ using MoviesBE.Services.Factories;
 using MoviesBE.Services.IMDB;
 using MoviesBE.Services.RT;
 using MoviesBE.Services.TMDB;
+using MoviesBE.Services.User;
 using Neo4j.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,6 +55,12 @@ builder.Services.AddScoped<RTScrapingService>();
 
 builder.Services.AddHostedService<MovieDataCompletionService>();
 
+builder.Services.AddHttpClient<Auth0Client>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+builder.Services.AddHttpContextAccessor();
+
 // Configure logging
 builder.Logging.AddConsole();
 
@@ -59,10 +68,30 @@ builder.Logging.AddConsole();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin",
-        corsBuilder => corsBuilder.WithOrigins("http://localhost:4200")
+        corsBuilder => corsBuilder.WithOrigins("http://localhost:3000")
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
+// JWT Bearer Authentication
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        var auth0Settings = builder.Configuration.GetSection("Auth0");
+        options.Authority = auth0Settings["Domain"];
+        options.Audience = auth0Settings["Audience"];
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+        };
+    });
 
 var app = builder.Build();
 
@@ -75,6 +104,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowSpecificOrigin");
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (!app.Environment.IsDevelopment())
 {
