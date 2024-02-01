@@ -2,6 +2,7 @@
 using MoviesBE.Entities;
 using MoviesBE.Exceptions;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Utilities.Conversions;
 
 namespace MoviesBE.Services.UserService;
 
@@ -43,24 +44,10 @@ public class UserService
             throw new UserRegistrationException("Auth0 ID is missing in the user information.");
         }
 
-        var user = MapUserInfoToUser(userInfo);
+        var user = UserConverter.MapToUser(userInfo);
 
         await _userRepository.AddOrUpdateAsync(user);
 
         return user;
-    }
-
-    private static User MapUserInfoToUser(UserInfo userInfo)
-    {
-        return new User
-        {
-            Auth0Id = userInfo.Sub,
-            Email = userInfo.Email,
-            FullName = userInfo.Name,
-            ProfilePicture = userInfo.Picture,
-            EmailVerified = userInfo.EmailVerified,
-            Role = Role.User,
-            Language = userInfo.Locale
-        };
     }
 }

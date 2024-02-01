@@ -85,7 +85,7 @@ public class UserRepository : IUserRepository
         if (await cursor.FetchAsync())
         {
             var userNode = cursor.Current["u"].As<INode>();
-            return UserNodeConverter.ConvertNodeToUser(userNode);
+            return UserConverter.ConvertNodeToUser(userNode);
         }
 
         return null;
