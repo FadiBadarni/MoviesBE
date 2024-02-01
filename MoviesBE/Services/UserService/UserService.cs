@@ -8,25 +8,25 @@ namespace MoviesBE.Services.UserService;
 public class UserService
 {
     private readonly Auth0Client _auth0Client;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly AuthenticationService _authenticationService;
     private readonly IUserRepository _userRepository;
 
     public UserService(IUserRepository userRepository, Auth0Client auth0Client,
-        IHttpContextAccessor httpContextAccessor)
+        AuthenticationService authenticationService)
     {
         _userRepository = userRepository;
         _auth0Client = auth0Client;
-        _httpContextAccessor = httpContextAccessor;
+        _authenticationService = authenticationService;
     }
 
     public async Task<User> RegisterOrUpdateUserAsync()
     {
-        var accessToken = GetAccessTokenFromHttpContext();
+        var accessToken = _authenticationService.GetAccessTokenFromHttpContext();
 
         UserInfo userInfo;
         try
         {
-            userInfo = await _auth0Client.GetUserInfoAsync(accessToken);
+            userInfo = await _auth0Client.GetAuth0UserInfoAsync(accessToken);
         }
         catch (Exception ex)
         {
@@ -62,33 +62,5 @@ public class UserService
             Role = Role.User,
             Language = userInfo.Locale
         };
-    }
-
-    private string GetAccessTokenFromHttpContext()
-    {
-        const string bearerPrefix = "Bearer ";
-
-        var httpContext = _httpContextAccessor.HttpContext
-                          ?? throw new InvalidOperationException("HttpContext is not available.");
-
-        if (!httpContext.Request.Headers.TryGetValue("Authorization", out var authorizationHeaderValues)
-            || string.IsNullOrWhiteSpace(authorizationHeaderValues))
-        {
-            throw new InvalidOperationException("Authorization header is missing.");
-        }
-
-        var authorizationHeader = authorizationHeaderValues.ToString();
-        if (!authorizationHeader.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("Invalid authorization header format.");
-        }
-
-        var token = authorizationHeader[bearerPrefix.Length..].Trim();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            throw new InvalidOperationException("Access token is missing in the authorization header.");
-        }
-
-        return token;
     }
 }

@@ -57,6 +57,7 @@ builder.Services.AddHostedService<MovieDataCompletionService>();
 
 builder.Services.AddHttpClient<Auth0Client>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddHttpContextAccessor();

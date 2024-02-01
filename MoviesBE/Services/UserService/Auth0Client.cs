@@ -16,7 +16,7 @@ public class Auth0Client
         _userInfoEndpoint = configuration["Auth0:UserInfoEndpoint"];
     }
 
-    public async Task<UserInfo> GetUserInfoAsync(string accessToken)
+    public async Task<UserInfo> GetAuth0UserInfoAsync(string accessToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, _userInfoEndpoint);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
