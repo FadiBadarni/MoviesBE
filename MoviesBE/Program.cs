@@ -81,7 +81,7 @@ builder.Services.AddAuthentication(options =>
     .AddJwtBearer(options =>
     {
         var auth0Settings = builder.Configuration.GetSection("Auth0");
-        options.Authority = auth0Settings["Domain"];
+        options.Authority = $"https://{auth0Settings["Domain"]}/";
         options.Audience = auth0Settings["Audience"];
         options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = new TokenValidationParameters

@@ -40,13 +40,13 @@ public class UserRepository : IUserRepository
                               "u.role = $role, u.language = $language",
                 new
                 {
-                    user.Auth0Id,
-                    user.Email,
-                    user.FullName,
-                    user.ProfilePicture,
-                    user.EmailVerified,
+                    auth0Id = user.Auth0Id,
+                    email = user.Email,
+                    fullName = user.FullName,
+                    profilePicture = user.ProfilePicture,
+                    emailVerified = user.EmailVerified,
                     role = user.Role.ToString(),
-                    user.Language
+                    language = user.Language
                 });
         });
     }

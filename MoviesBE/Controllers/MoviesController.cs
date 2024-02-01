@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MoviesBE.DTOs;
 using MoviesBE.Entities;
 using MoviesBE.Services.TMDB;
@@ -37,7 +38,7 @@ public class MoviesController : ControllerBase
         return Ok(movies);
     }
 
-
+    [Authorize]
     [HttpGet("popular")]
     public async Task<ActionResult<List<PopularMovie>>> GetPopularMovies([FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
@@ -46,6 +47,7 @@ public class MoviesController : ControllerBase
         return Ok(new { movies, totalMovies });
     }
 
+    [Authorize]
     [HttpGet("top-rated")]
     public async Task<ActionResult<List<TopRatedMovie>>> GetTopRatedMovies(
         [FromQuery] int page = 1,
