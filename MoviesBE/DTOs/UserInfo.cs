@@ -5,20 +5,20 @@ namespace MoviesBE.DTOs;
 public class UserInfo
 {
     [JsonPropertyName("sub")]
-    public string Sub { get; set; }
+    public string? Sub { get; init; }
 
     [JsonPropertyName("email")]
-    public string Email { get; set; }
+    public string? Email { get; init; }
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string? Name { get; init; }
 
     [JsonPropertyName("picture")]
-    public string Picture { get; set; }
+    public string? Picture { get; init; }
 
     [JsonPropertyName("email_verified")]
-    public bool EmailVerified { get; set; }
+    public bool EmailVerified { get; init; }
 
     [JsonPropertyName("locale")]
-    public string Locale { get; set; }
+    public string? Locale { get; init; }
 }
