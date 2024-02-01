@@ -94,6 +94,13 @@ public class ExceptionMiddleware
                     StatusCode = context.Response.StatusCode,
                     Message = userInfoException.Message
                 }.ToString());
+            case UserRegistrationException userRegistrationException:
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return context.Response.WriteAsync(new ErrorDetails
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = userRegistrationException.Message
+                }.ToString());
 
 
             // TODO: handle other exception types ...

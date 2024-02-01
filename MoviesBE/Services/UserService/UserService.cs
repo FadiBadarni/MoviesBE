@@ -1,7 +1,7 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
+using MoviesBE.Exceptions;
 using MoviesBE.Repositories.Implementations;
-using MoviesBE.Services.User;
 
 namespace MoviesBE.Services.UserService;
 
@@ -19,11 +19,24 @@ public class UserService
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<Entities.User> RegisterOrUpdateUserAsync()
+    public async Task<User> RegisterOrUpdateUserAsync()
     {
         var accessToken = GetAccessTokenFromHttpContext();
 
-        var userInfo = await _auth0Client.GetUserInfoAsync(accessToken);
+        UserInfo userInfo;
+        try
+        {
+            userInfo = await _auth0Client.GetUserInfoAsync(accessToken);
+        }
+        catch (Exception ex)
+        {
+            throw new UserRegistrationException("Error retrieving user information from Auth0.", ex);
+        }
+
+        if (userInfo == null)
+        {
+            throw new UserRegistrationException("User information is null after retrieval from Auth0.");
+        }
 
         var existingUser = await _userRepository.FindByAuth0IdAsync(userInfo.Sub);
         if (existingUser != null)
@@ -39,7 +52,7 @@ public class UserService
     }
 
 
-    private void UpdateExistingUser(Entities.User existingUser, UserInfo userInfo)
+    private void UpdateExistingUser(User existingUser, UserInfo userInfo)
     {
         // Update user properties
         existingUser.Email = userInfo.Email;
@@ -48,10 +61,10 @@ public class UserService
         existingUser.EmailVerified = userInfo.EmailVerified;
     }
 
-    private static Entities.User MapUserInfoToUser(UserInfo userInfo)
+    private static User MapUserInfoToUser(UserInfo userInfo)
     {
         // Create a new User entity from UserInfo
-        return new Entities.User
+        return new User
         {
             Auth0Id = userInfo.Sub,
             Email = userInfo.Email,

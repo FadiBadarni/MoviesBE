@@ -3,7 +3,7 @@ using System.Text.Json;
 using MoviesBE.DTOs;
 using MoviesBE.Exceptions;
 
-namespace MoviesBE.Services.User;
+namespace MoviesBE.Services.UserService;
 
 public class Auth0Client
 {
