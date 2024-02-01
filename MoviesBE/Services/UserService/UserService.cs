@@ -1,7 +1,7 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
 using MoviesBE.Exceptions;
-using MoviesBE.Repositories.Implementations;
+using MoviesBE.Repositories.Interfaces;
 
 namespace MoviesBE.Services.UserService;
 
@@ -38,6 +38,11 @@ public class UserService
             throw new UserRegistrationException("User information is null after retrieval from Auth0.");
         }
 
+        if (string.IsNullOrEmpty(userInfo.Sub))
+        {
+            throw new UserRegistrationException("Auth0 ID is missing in the user information.");
+        }
+
         var existingUser = await _userRepository.FindByAuth0IdAsync(userInfo.Sub);
         if (existingUser != null)
         {
@@ -54,16 +59,15 @@ public class UserService
 
     private void UpdateExistingUser(User existingUser, UserInfo userInfo)
     {
-        // Update user properties
         existingUser.Email = userInfo.Email;
         existingUser.FullName = userInfo.Name;
         existingUser.ProfilePicture = userInfo.Picture;
         existingUser.EmailVerified = userInfo.EmailVerified;
+        existingUser.Language = userInfo.Locale;
     }
 
     private static User MapUserInfoToUser(UserInfo userInfo)
     {
-        // Create a new User entity from UserInfo
         return new User
         {
             Auth0Id = userInfo.Sub,
