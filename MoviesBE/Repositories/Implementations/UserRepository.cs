@@ -81,6 +81,26 @@ public class UserRepository : IUserRepository
         return watchlist;
     }
 
+    public async Task<bool> UnbookmarkMovieAsync(string userId, int movieId)
+    {
+        await using var session = _neo4JDriver.AsyncSession();
+        return await session.ExecuteWriteAsync(async tx =>
+        {
+            var result = await tx.RunAsync(
+                @"MATCH (u:User {auth0Id: $userId})-[r:BOOKMARKED]->(m:Movie {id: $movieId})
+                  DELETE r
+                  RETURN COUNT(r) > 0 AS unbookmarked",
+                new { userId, movieId });
+
+            if (await result.FetchAsync())
+            {
+                return result.Current["unbookmarked"].As<bool>();
+            }
+
+            return false;
+        });
+    }
+
 
     private async Task MergeUser(IAsyncQueryRunner tx, User user)
     {

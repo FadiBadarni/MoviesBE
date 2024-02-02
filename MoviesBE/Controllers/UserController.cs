@@ -30,4 +30,12 @@ public class UserController : ControllerBase
         var watchlist = await _userService.FetchWatchlist(userId);
         return Ok(watchlist);
     }
+
+    [Authorize]
+    [HttpDelete("{movieId:int}/unbookmark")]
+    public async Task<ActionResult> UnbookmarkMovie(int movieId, [FromQuery] string userId)
+    {
+        var unbookmarkedMovieId = await _userService.UnbookmarkMovie(userId, movieId);
+        return Ok(new { MovieId = unbookmarkedMovieId, Message = "Movie unbookmarked successfully." });
+    }
 }

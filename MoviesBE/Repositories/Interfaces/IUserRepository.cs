@@ -9,4 +9,5 @@ public interface IUserRepository
     Task AddOrUpdateAsync(User user);
     Task<bool> BookmarkMovieAsync(string userId, int movieId);
     Task<List<int>> FetchWatchlistAsync(string userId);
+    Task<bool> UnbookmarkMovieAsync(string userId, int movieId);
 }

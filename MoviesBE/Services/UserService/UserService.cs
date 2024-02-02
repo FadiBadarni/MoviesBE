@@ -67,6 +67,25 @@ public class UserService
         return movieId;
     }
 
+    public async Task<int> UnbookmarkMovie(string userId, int movieId)
+    {
+        // Check if the movie exists
+        var movieExists = await _movieRepository.MovieExistsAsync(movieId);
+        if (!movieExists)
+        {
+            throw new KeyNotFoundException($"Movie with ID {movieId} not found.");
+        }
+
+        // Remove the movie from the user's watchlist
+        var unbookmarked = await _userRepository.UnbookmarkMovieAsync(userId, movieId);
+        if (!unbookmarked)
+        {
+            throw new InvalidOperationException($"Failed to unbookmark movie with ID {movieId}.");
+        }
+
+        return movieId;
+    }
+
     public async Task<List<int>> FetchWatchlist(string userId)
     {
         var userExists = await _userRepository.FindByAuth0IdAsync(userId);
