@@ -66,4 +66,15 @@ public class UserService
 
         return movieId;
     }
+
+    public async Task<List<int>> FetchWatchlist(string userId)
+    {
+        var userExists = await _userRepository.FindByAuth0IdAsync(userId);
+        if (userExists == null)
+        {
+            throw new KeyNotFoundException($"User with ID {userId} not found.");
+        }
+
+        return await _userRepository.FetchWatchlistAsync(userId);
+    }
 }

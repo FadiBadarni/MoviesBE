@@ -22,4 +22,12 @@ public class UserController : ControllerBase
         var savedMovieId = await _userService.BookmarkMovie(userId, movieId);
         return Ok(new { MovieId = savedMovieId });
     }
+
+    [Authorize]
+    [HttpGet("{userId}/watchlist")]
+    public async Task<ActionResult<List<int>>> FetchWatchlist(string userId)
+    {
+        var watchlist = await _userService.FetchWatchlist(userId);
+        return Ok(watchlist);
+    }
 }

@@ -63,6 +63,24 @@ public class UserRepository : IUserRepository
         return true;
     }
 
+    public async Task<List<int>> FetchWatchlistAsync(string userId)
+    {
+        var watchlist = new List<int>();
+        await using var session = _neo4JDriver.AsyncSession();
+        await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(
+                @"
+            MATCH (u:User {auth0Id: $userId})-[:BOOKMARKED]->(m:Movie)
+            RETURN m.id AS movieId",
+                new { userId });
+
+            while (await cursor.FetchAsync()) watchlist.Add(cursor.Current["movieId"].As<int>());
+        });
+
+        return watchlist;
+    }
+
 
     private async Task MergeUser(IAsyncQueryRunner tx, User user)
     {
