@@ -7,4 +7,5 @@ public interface IUserRepository
     Task<User?> FindByAuth0IdAsync(string auth0Id);
 
     Task AddOrUpdateAsync(User user);
+    Task<bool> BookmarkMovieAsync(string userId, int movieId);
 }

@@ -522,4 +522,24 @@ public class MovieRepository : IMovieRepository
                 voteCount = movie.VoteCount
             });
     }
+
+    public async Task<bool> MovieExistsAsync(int movieId)
+    {
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(
+                "MATCH (m:Movie {id: $id}) RETURN count(m) > 0 AS exists",
+                new { id = movieId });
+            if (await cursor.FetchAsync())
+            {
+                return cursor.Current["exists"].As<bool>();
+            }
+
+            return false;
+        });
+
+        return result;
+    }
 }

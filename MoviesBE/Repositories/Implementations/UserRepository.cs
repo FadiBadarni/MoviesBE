@@ -45,6 +45,25 @@ public class UserRepository : IUserRepository
         }
     }
 
+    public async Task<bool> BookmarkMovieAsync(string userId, int movieId)
+    {
+        await using var session = _neo4JDriver.AsyncSession();
+
+        await session.ExecuteWriteAsync(async tx =>
+        {
+            var result = await tx.RunAsync(
+                @"
+                MATCH (u:User {auth0Id: $userId}), (m:Movie {id: $movieId})
+                MERGE (u)-[:BOOKMARKED]->(m)
+                RETURN id(m) AS movieId",
+                new { userId, movieId });
+
+            return await result.FetchAsync();
+        });
+        return true;
+    }
+
+
     private async Task MergeUser(IAsyncQueryRunner tx, User user)
     {
         var query = @"MERGE (u:User {auth0Id: $auth0Id})

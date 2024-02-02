@@ -10,14 +10,16 @@ public class UserService
 {
     private readonly Auth0Client _auth0Client;
     private readonly AuthenticationService _authenticationService;
+    private readonly IMovieRepository _movieRepository;
     private readonly IUserRepository _userRepository;
 
     public UserService(IUserRepository userRepository, Auth0Client auth0Client,
-        AuthenticationService authenticationService)
+        AuthenticationService authenticationService, IMovieRepository movieRepository)
     {
         _userRepository = userRepository;
         _auth0Client = auth0Client;
         _authenticationService = authenticationService;
+        _movieRepository = movieRepository;
     }
 
     public async Task<User> RegisterOrUpdateUserAsync()
@@ -49,5 +51,19 @@ public class UserService
         await _userRepository.AddOrUpdateAsync(user);
 
         return user;
+    }
+
+    public async Task<int> BookmarkMovie(string userId, int movieId)
+    {
+        // Check if the movie exists
+        var movieExists = await _movieRepository.MovieExistsAsync(movieId);
+        if (!movieExists)
+        {
+            throw new KeyNotFoundException($"Movie with ID {movieId} not found.");
+        }
+
+        await _userRepository.BookmarkMovieAsync(userId, movieId);
+
+        return movieId;
     }
 }
