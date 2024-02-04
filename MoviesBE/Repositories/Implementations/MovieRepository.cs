@@ -101,10 +101,10 @@ public class MovieRepository : IMovieRepository
         }
     }
 
-    public async Task<Movie?> GetMovieByIdAsync(int movieId)
+    public async Task<Movie?> GetMovieByIdAsync(int movieId, string? userId = null)
     {
         await using var session = _neo4JDriver.AsyncSession();
-        return await session.ExecuteReadAsync(async tx =>
+        var movie = await session.ExecuteReadAsync(async tx =>
         {
             var cursor = await tx.RunAsync(@"MATCH (m:Movie {id: $id}) RETURN m", new { id = movieId });
 
@@ -145,6 +145,14 @@ public class MovieRepository : IMovieRepository
 
             return null;
         });
+
+        // Log the visit if the user is authenticated
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await LogUserVisitAsync(userId, movieId);
+        }
+
+        return movie;
     }
 
     public async Task<List<PopularMovie>> GetLimitedPopularMoviesAsync(int limit = 3)
@@ -374,6 +382,38 @@ public class MovieRepository : IMovieRepository
         return (movies, totalCount);
     }
 
+    public async Task<bool> MovieExistsAsync(int movieId)
+    {
+        await using var session = _neo4JDriver.AsyncSession();
+
+        var result = await session.ExecuteReadAsync(async tx =>
+        {
+            var cursor = await tx.RunAsync(
+                "MATCH (m:Movie {id: $id}) RETURN count(m) > 0 AS exists",
+                new { id = movieId });
+            if (await cursor.FetchAsync())
+            {
+                return cursor.Current["exists"].As<bool>();
+            }
+
+            return false;
+        });
+
+        return result;
+    }
+
+    private async Task LogUserVisitAsync(string userId, int movieId)
+    {
+        await using var session = _neo4JDriver.AsyncSession();
+        await session.ExecuteWriteAsync(async tx =>
+        {
+            await tx.RunAsync(@"
+            MATCH (u:User {auth0Id: $userId}), (m:Movie {id: $movieId})
+            MERGE (u)-[r:VIEWED]->(m)
+            ON CREATE SET r.accessTimestamp = datetime()
+        ", new { userId, movieId });
+        });
+    }
 
     private async Task<List<TopRatedMovie>> FetchTopRatedMoviesAsync(int? limit = null)
     {
@@ -521,25 +561,5 @@ public class MovieRepository : IMovieRepository
                 voteAverage = movie.VoteAverage,
                 voteCount = movie.VoteCount
             });
-    }
-
-    public async Task<bool> MovieExistsAsync(int movieId)
-    {
-        await using var session = _neo4JDriver.AsyncSession();
-
-        var result = await session.ExecuteReadAsync(async tx =>
-        {
-            var cursor = await tx.RunAsync(
-                "MATCH (m:Movie {id: $id}) RETURN count(m) > 0 AS exists",
-                new { id = movieId });
-            if (await cursor.FetchAsync())
-            {
-                return cursor.Current["exists"].As<bool>();
-            }
-
-            return false;
-        });
-
-        return result;
     }
 }

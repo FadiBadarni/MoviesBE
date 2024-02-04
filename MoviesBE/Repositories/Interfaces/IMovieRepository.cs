@@ -7,7 +7,7 @@ public interface IMovieRepository
 {
     Task SaveMovieAsync(Movie movie);
 
-    Task<Movie?> GetMovieByIdAsync(int movieId);
+    Task<Movie?> GetMovieByIdAsync(int movieId, string? userId = null);
 
     Task<(List<PopularMovie>, int)> GetPopularMoviesAsync(int page, int pageSize);
 

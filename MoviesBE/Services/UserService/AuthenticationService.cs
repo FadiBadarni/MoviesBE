@@ -1,4 +1,6 @@
-﻿namespace MoviesBE.Services.UserService;
+﻿using System.Security.Claims;
+
+namespace MoviesBE.Services.UserService;
 
 public class AuthenticationService
 {
@@ -35,5 +37,12 @@ public class AuthenticationService
         }
 
         return token;
+    }
+
+    public string? GetUserId()
+    {
+        var userId = _httpContextAccessor.HttpContext?.User.Claims
+            .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        return userId;
     }
 }

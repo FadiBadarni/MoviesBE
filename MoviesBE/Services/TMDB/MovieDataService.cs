@@ -1,27 +1,31 @@
 ﻿using MoviesBE.DTOs;
 using MoviesBE.Entities;
 using MoviesBE.Repositories.Interfaces;
+using MoviesBE.Services.UserService;
 
 namespace MoviesBE.Services.TMDB;
 
 public class MovieDataService
 {
     private const int HomePageMovieLimit = 3;
+    private readonly AuthenticationService _authenticationService;
     private readonly IGenreRepository _genreRepository;
     private readonly IMovieRepository _movieRepository;
     private readonly TmdbApiService _tmdbApiService;
 
     public MovieDataService(TmdbApiService tmdbApiService, IMovieRepository movieRepository,
-        IGenreRepository genreRepository)
+        IGenreRepository genreRepository, AuthenticationService authenticationService)
     {
         _tmdbApiService = tmdbApiService;
         _movieRepository = movieRepository;
         _genreRepository = genreRepository;
+        _authenticationService = authenticationService;
     }
 
     public async Task<Movie> GetMovieByIdAsync(int movieId)
     {
-        var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId);
+        var userId = _authenticationService.GetUserId();
+        var movieInDb = await _movieRepository.GetMovieByIdAsync(movieId, userId);
 
         if (movieInDb != null && IsMovieDataComplete(movieInDb))
         {
