@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient<Auth0Client>();
 
         services.AddScoped<UserService.UserService>();
+        services.AddScoped<RecommendationService>();
         services.AddScoped<IUserRepository, UserRepository>();
 
         var auth0Settings = configuration.GetSection("Auth0");
