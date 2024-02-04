@@ -11,15 +11,18 @@ public class MovieDataService
     private readonly AuthenticationService _authenticationService;
     private readonly IGenreRepository _genreRepository;
     private readonly IMovieRepository _movieRepository;
+    private readonly RecommendationService _recommendationService;
     private readonly TmdbApiService _tmdbApiService;
 
     public MovieDataService(TmdbApiService tmdbApiService, IMovieRepository movieRepository,
-        IGenreRepository genreRepository, AuthenticationService authenticationService)
+        IGenreRepository genreRepository, AuthenticationService authenticationService,
+        RecommendationService recommendationService)
     {
         _tmdbApiService = tmdbApiService;
         _movieRepository = movieRepository;
         _genreRepository = genreRepository;
         _authenticationService = authenticationService;
+        _recommendationService = recommendationService;
     }
 
     public async Task<Movie> GetMovieByIdAsync(int movieId)
@@ -53,10 +56,13 @@ public class MovieDataService
         return await _movieRepository.GetTopRatedMoviesAsync(page, pageSize, ratingFilter, genreFilter);
     }
 
-    public async Task<(List<TopRatedMovie>, int)> GetRecommendedMoviesAsync(int page, int pageSize, string ratingFilter,
+    public async Task<(List<RecommendedMovie>, int)> GetRecommendedMoviesAsync(int page, int pageSize,
+        string ratingFilter,
         int? genreFilter)
     {
-        return await _movieRepository.GetTopRatedMoviesAsync(page, pageSize, ratingFilter, genreFilter);
+        var userId = _authenticationService.GetUserId();
+        return await _recommendationService.GetRecommendedMoviesAsync(userId, page, pageSize, ratingFilter,
+            genreFilter);
     }
 
     public async Task<List<Movie>> GetTMDBPopularAndSave()

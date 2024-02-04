@@ -61,7 +61,7 @@ public class MoviesController : ControllerBase
     }
 
     [HttpGet("recommended")]
-    public async Task<ActionResult<List<TopRatedMovie>>> GetRecommendedMovies(
+    public async Task<ActionResult<List<RecommendedMovie>>> GetRecommendedMovies(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] string ratingFilter = "Default",
