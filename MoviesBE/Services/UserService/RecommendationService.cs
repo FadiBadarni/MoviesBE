@@ -6,15 +6,18 @@ namespace MoviesBE.Services.UserService;
 
 public class RecommendationService
 {
+    private readonly IGenreRepository _genreRepository;
     private readonly IMovieRepository _movieRepository;
     private readonly IDriver _neo4JDriver;
     private readonly IUserRepository _userRepository;
 
-    public RecommendationService(IMovieRepository movieRepository, IUserRepository userRepository, IDriver neo4JDriver)
+    public RecommendationService(IMovieRepository movieRepository, IUserRepository userRepository, IDriver neo4JDriver,
+        IGenreRepository genreRepository)
     {
         _movieRepository = movieRepository;
         _userRepository = userRepository;
         _neo4JDriver = neo4JDriver;
+        _genreRepository = genreRepository;
     }
 
     public async Task<(List<RecommendedMovie>, int)> GetRecommendedMoviesAsync(string userId, int page, int pageSize,
@@ -22,7 +25,7 @@ public class RecommendationService
     {
         // Find similar users based on movie interactions
         var similarUsers = await FindSimilarUsersAsync(userId);
-        
+
         // Recommend movies from similar users
         var recommendedMovies = await RecommendMoviesFromSimilarUsersAsync(userId, similarUsers);
 
@@ -30,7 +33,7 @@ public class RecommendationService
         return (new List<RecommendedMovie>(), 0);
     }
 
-    public async Task<List<string>> FindSimilarUsersAsync(string userId)
+    private async Task<List<string>> FindSimilarUsersAsync(string userId)
     {
         var similarUsers = new List<string>();
 
@@ -56,37 +59,45 @@ public class RecommendationService
         return similarUsers;
     }
 
-    public async Task<List<RecommendedMovie>> RecommendMoviesFromSimilarUsersAsync(string userId,
+    private async Task<List<RecommendedMovie>> RecommendMoviesFromSimilarUsersAsync(string userId,
         List<string> similarUserIds)
     {
         var recommendedMovies = new List<RecommendedMovie>();
 
         await using var session = _neo4JDriver.AsyncSession();
-        var result = await session.ExecuteReadAsync(async tx =>
+        await session.ExecuteReadAsync(async tx =>
         {
             var query = @"MATCH (movie:Movie)<-[:VIEWED|BOOKMARKED]-(user:User)
-                        WHERE user.auth0Id IN $similarUserIds
-                        AND NOT (:User {auth0Id: $userId})-[:VIEWED|BOOKMARKED]->(movie)
-                        RETURN movie, COUNT(*) AS recommendations
-                        ORDER BY recommendations DESC
-                        LIMIT 10";
+                      WHERE user.auth0Id IN $similarUserIds
+                      AND NOT (:User {auth0Id: $userId})-[:VIEWED|BOOKMARKED]->(movie)
+                      RETURN movie, COUNT(*) AS recommendations
+                      ORDER BY recommendations DESC
+                      LIMIT 10";
 
             var cursor = await tx.RunAsync(query, new { userId, similarUserIds });
             var records = await cursor.ToListAsync();
-            return records;
-        });
-
-        foreach (var record in result)
-        {
-            var movie = new RecommendedMovie
+            foreach (var record in records)
             {
-                // Map the record to your RecommendedMovie model
-                // Example: MovieId = record["movie"]["id"].As<int>(),
-                // Title = record["movie"]["title"].As<string>(),
-                // Recommendations = record["recommendations"].As<int>()
-            };
-            recommendedMovies.Add(movie);
-        }
+                var movieNode = record["movie"].As<INode>();
+                var movieId = movieNode["id"].As<int>();
+                var genres =
+                    await _genreRepository.GetMovieGenresAsync(tx, movieId);
+
+                var movie = new RecommendedMovie
+                {
+                    Id = movieId,
+                    Title = movieNode["title"].As<string>(),
+                    PosterPath = movieNode["posterPath"].As<string>(),
+                    ReleaseDate = movieNode["releaseDate"].As<string>(),
+                    Overview = movieNode["overview"].As<string>(),
+                    Runtime = movieNode["runtime"].As<int>(),
+                    Genres = genres
+                };
+                recommendedMovies.Add(movie);
+            }
+
+            return recommendedMovies;
+        });
 
         return recommendedMovies;
     }
