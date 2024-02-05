@@ -104,10 +104,18 @@ public class UserRepository : IUserRepository
         await using var session = _neo4JDriver.AsyncSession();
         return await session.ExecuteWriteAsync(async tx =>
         {
+            // Attempt to decrease the weight of the VIEWED relationship by the bookmark weight if it exists and is greater than the decrement
+            await tx.RunAsync(
+                @"MATCH (u:User {auth0Id: $userId})-[r:VIEWED]->(m:Movie {id: $movieId})
+                        WHERE r.weight IS NOT NULL AND r.weight > $decrement
+                        SET r.weight = CASE WHEN r.weight - $decrement < 0 THEN 0 ELSE r.weight - $decrement END",
+                new { userId, movieId, decrement = BookmarkWeight });
+
+            // Delete the BOOKMARKED relationship
             var result = await tx.RunAsync(
                 @"MATCH (u:User {auth0Id: $userId})-[r:BOOKMARKED]->(m:Movie {id: $movieId})
-                  DELETE r
-                  RETURN COUNT(r) > 0 AS unbookmarked",
+                        DELETE r
+                        RETURN COUNT(r) > 0 AS unbookmarked",
                 new { userId, movieId });
 
             if (await result.FetchAsync())
@@ -118,7 +126,6 @@ public class UserRepository : IUserRepository
             return false;
         });
     }
-
 
     private async Task MergeUser(IAsyncQueryRunner tx, User user)
     {
