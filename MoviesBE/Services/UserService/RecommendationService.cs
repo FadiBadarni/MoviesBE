@@ -6,8 +6,6 @@ namespace MoviesBE.Services.UserService;
 
 public class RecommendationService
 {
-    private const double FullViewWeight = 1.0;
-    private const double BookmarkWeight = 2.0;
     private readonly IGenreRepository _genreRepository;
     private readonly IMovieRepository _movieRepository;
     private readonly IDriver _neo4JDriver;
@@ -28,12 +26,17 @@ public class RecommendationService
         // Find similar users based on movie interactions
         var similarUsers = await FindSimilarUsersAsync(userId);
 
-        // Recommend movies from similar users
-        var recommendedMovies = await RecommendMoviesFromSimilarUsersAsync(userId, similarUsers);
+        // Calculate skip based on page and pageSize
+        var skip = (page - 1) * pageSize;
 
+        // Recommend movies from similar users with pagination
+        var (recommendedMovies, totalRecommendations) =
+            await RecommendMoviesFromSimilarUsersAsync(userId, similarUsers, skip, pageSize);
 
-        return (new List<RecommendedMovie>(), 0);
+        // Return the paginated list of movies and the total count of recommendations
+        return (recommendedMovies, totalRecommendations);
     }
+
 
     private async Task<List<string>> FindSimilarUsersAsync(string userId)
     {
@@ -61,20 +64,31 @@ public class RecommendationService
         return similarUsers;
     }
 
-    private async Task<List<RecommendedMovie>> RecommendMoviesFromSimilarUsersAsync(string userId,
-        List<string> similarUserIds)
+    private async Task<(List<RecommendedMovie>, int)> RecommendMoviesFromSimilarUsersAsync(string userId,
+        List<string> similarUserIds, int skip, int pageSize)
     {
         var recommendedMovies = new List<RecommendedMovie>();
+        var totalRecommendations = 0;
 
         await using var session = _neo4JDriver.AsyncSession();
         await session.ExecuteReadAsync(async tx =>
         {
-            var query = @"MATCH (movie:Movie)<-[rel:VIEWED|BOOKMARKED]-(user:User)
-                            WHERE user.auth0Id IN $similarUserIds AND NOT (:User {auth0Id: $userId})-[:VIEWED|BOOKMARKED]->(movie)
-                            WITH movie, SUM(rel.weight) AS totalWeight
-                            RETURN movie, totalWeight ORDER BY totalWeight DESC LIMIT 10";
+            // First, get the total count of recommendations
+            var countQuery = @"MATCH (movie:Movie)<-[rel:VIEWED|BOOKMARKED]-(user:User)
+                           WHERE user.auth0Id IN $similarUserIds AND NOT (:User {auth0Id: $userId})-[:VIEWED|BOOKMARKED]->(movie)
+                           RETURN COUNT(DISTINCT movie) AS totalCount";
+            var countResult = await tx.RunAsync(countQuery, new { userId, similarUserIds });
+            if (await countResult.FetchAsync())
+            {
+                totalRecommendations = countResult.Current["totalCount"].As<int>();
+            }
 
-            var cursor = await tx.RunAsync(query, new { userId, similarUserIds });
+            // Then, query for the paginated list of recommended movies
+            var query = @"MATCH (movie:Movie)<-[rel:VIEWED|BOOKMARKED]-(user:User)
+                      WHERE user.auth0Id IN $similarUserIds AND NOT (:User {auth0Id: $userId})-[:VIEWED|BOOKMARKED]->(movie)
+                      WITH movie, SUM(rel.weight) AS totalWeight
+                      RETURN movie, totalWeight ORDER BY totalWeight DESC SKIP $skip LIMIT $pageSize";
+            var cursor = await tx.RunAsync(query, new { userId, similarUserIds, skip, pageSize });
             var records = await cursor.ToListAsync();
 
             var maxWeight = records.Max(record => record["totalWeight"].As<double>());
@@ -101,27 +115,8 @@ public class RecommendationService
                 };
                 recommendedMovies.Add(movie);
             }
-
-            return recommendedMovies;
         });
 
-        return recommendedMovies;
-    }
-
-    public double CalculateViewWeight(bool isFullView, bool isBookmarked)
-    {
-        double weight = 0;
-
-        if (isFullView)
-        {
-            weight += FullViewWeight;
-        }
-
-        if (isBookmarked)
-        {
-            weight += BookmarkWeight;
-        }
-
-        return weight;
+        return (recommendedMovies, totalRecommendations);
     }
 }
