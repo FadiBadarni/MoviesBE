@@ -69,21 +69,24 @@ public class RecommendationService
         await using var session = _neo4JDriver.AsyncSession();
         await session.ExecuteReadAsync(async tx =>
         {
-            var query = @"MATCH (movie:Movie)<-[:VIEWED|BOOKMARKED]-(user:User)
-                      WHERE user.auth0Id IN $similarUserIds
-                      AND NOT (:User {auth0Id: $userId})-[:VIEWED|BOOKMARKED]->(movie)
-                      RETURN movie, COUNT(*) AS recommendations
-                      ORDER BY recommendations DESC
-                      LIMIT 10";
+            var query = @"MATCH (movie:Movie)<-[rel:VIEWED|BOOKMARKED]-(user:User)
+                            WHERE user.auth0Id IN $similarUserIds AND NOT (:User {auth0Id: $userId})-[:VIEWED|BOOKMARKED]->(movie)
+                            WITH movie, SUM(rel.weight) AS totalWeight
+                            RETURN movie, totalWeight ORDER BY totalWeight DESC LIMIT 10";
 
             var cursor = await tx.RunAsync(query, new { userId, similarUserIds });
             var records = await cursor.ToListAsync();
+
+            var maxWeight = records.Max(record => record["totalWeight"].As<double>());
+
             foreach (var record in records)
             {
                 var movieNode = record["movie"].As<INode>();
                 var movieId = movieNode["id"].As<int>();
-                var genres =
-                    await _genreRepository.GetMovieGenresAsync(tx, movieId);
+                var genres = await _genreRepository.GetMovieGenresAsync(tx, movieId);
+
+                var totalWeight = record["totalWeight"].As<double>();
+                var recommendationScore = totalWeight / maxWeight * 100;
 
                 var movie = new RecommendedMovie
                 {
@@ -93,7 +96,8 @@ public class RecommendationService
                     ReleaseDate = movieNode["releaseDate"].As<string>(),
                     Overview = movieNode["overview"].As<string>(),
                     Runtime = movieNode["runtime"].As<int>(),
-                    Genres = genres
+                    Genres = genres,
+                    RecommendationScore = recommendationScore
                 };
                 recommendedMovies.Add(movie);
             }
