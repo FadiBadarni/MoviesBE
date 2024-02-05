@@ -9,6 +9,7 @@ namespace MoviesBE.Repositories.Implementations;
 
 public class MovieRepository : IMovieRepository
 {
+    private const double FullViewWeight = 1.0;
     private readonly IMBackdropRepository _backdropRepository;
     private readonly ICreditsRepository _creditsRepository;
     private readonly IGenreRepository _genreRepository;
@@ -407,13 +408,31 @@ public class MovieRepository : IMovieRepository
         await using var session = _neo4JDriver.AsyncSession();
         await session.ExecuteWriteAsync(async tx =>
         {
-            await tx.RunAsync(@"
-            MATCH (u:User {auth0Id: $userId}), (m:Movie {id: $movieId})
-            MERGE (u)-[r:VIEWED]->(m)
-            ON CREATE SET r.accessTimestamp = datetime()
-        ", new { userId, movieId });
+            // Check if a BOOKMARKED relationship already exists and if so, get its weight
+            var bookmarkedResult = await tx.RunAsync(
+                @"MATCH (u:User {auth0Id: $userId})-[r:BOOKMARKED]->(m:Movie {id: $movieId})
+                        RETURN r.weight AS bookmarkWeight",
+                new { userId, movieId });
+
+            double existingBookmarkWeight = 0;
+            if (await bookmarkedResult.FetchAsync())
+            {
+                existingBookmarkWeight = bookmarkedResult.Current["bookmarkWeight"].As<double>();
+            }
+
+            // Merge the VIEWED relationship with a weight, considering existing BOOKMARKED weight if any
+            await tx.RunAsync(@"MATCH (u:User {auth0Id: $userId}), (m:Movie {id: $movieId})
+                                    MERGE (u)-[r:VIEWED]->(m)
+                                    ON CREATE SET r.accessTimestamp = datetime(), r.weight = $viewWeight + $existingBookmarkWeight
+                                    ON MATCH SET r.weight = r.weight + $viewWeightIncrement",
+                new
+                {
+                    userId, movieId, viewWeight = FullViewWeight, viewWeightIncrement = FullViewWeight,
+                    existingBookmarkWeight
+                });
         });
     }
+
 
     private async Task<List<TopRatedMovie>> FetchTopRatedMoviesAsync(int? limit = null)
     {

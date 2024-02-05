@@ -7,6 +7,7 @@ namespace MoviesBE.Repositories.Implementations;
 
 public class UserRepository : IUserRepository
 {
+    private const double BookmarkWeight = 2.0;
     private readonly ILogger<UserRepository> _logger;
     private readonly IDriver _neo4JDriver;
 
@@ -51,17 +52,34 @@ public class UserRepository : IUserRepository
 
         await session.ExecuteWriteAsync(async tx =>
         {
-            var result = await tx.RunAsync(
+            // Check if a VIEWED relationship already exists and if so, get its weight
+            var viewedResult = await tx.RunAsync(
                 @"
-                MATCH (u:User {auth0Id: $userId}), (m:Movie {id: $movieId})
-                MERGE (u)-[:BOOKMARKED]->(m)
-                RETURN id(m) AS movieId",
+            MATCH (u:User {auth0Id: $userId})-[r:VIEWED]->(m:Movie {id: $movieId})
+            RETURN r.weight AS viewWeight",
                 new { userId, movieId });
 
-            return await result.FetchAsync();
+            double existingViewWeight = 0;
+            if (await viewedResult.FetchAsync())
+            {
+                existingViewWeight = viewedResult.Current["viewWeight"].As<double>();
+            }
+
+            // Merge the BOOKMARKED relationship with a weight that's the sum of the view weight and bookmark weight
+            var bookmarkResult = await tx.RunAsync(
+                @"
+            MATCH (u:User {auth0Id: $userId}), (m:Movie {id: $movieId})
+            MERGE (u)-[r:BOOKMARKED]->(m)
+            ON CREATE SET r.weight = $bookmarkWeight + $existingViewWeight
+            ON MATCH SET r.weight = $bookmarkWeight + $existingViewWeight
+            RETURN id(m) AS movieId",
+                new { userId, movieId, bookmarkWeight = BookmarkWeight, existingViewWeight });
+
+            return await bookmarkResult.FetchAsync();
         });
         return true;
     }
+
 
     public async Task<List<int>> FetchWatchlistAsync(string userId)
     {

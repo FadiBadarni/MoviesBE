@@ -6,6 +6,8 @@ namespace MoviesBE.Services.UserService;
 
 public class RecommendationService
 {
+    private const double FullViewWeight = 1.0;
+    private const double BookmarkWeight = 2.0;
     private readonly IGenreRepository _genreRepository;
     private readonly IMovieRepository _movieRepository;
     private readonly IDriver _neo4JDriver;
@@ -100,5 +102,22 @@ public class RecommendationService
         });
 
         return recommendedMovies;
+    }
+
+    public double CalculateViewWeight(bool isFullView, bool isBookmarked)
+    {
+        double weight = 0;
+
+        if (isFullView)
+        {
+            weight += FullViewWeight;
+        }
+
+        if (isBookmarked)
+        {
+            weight += BookmarkWeight;
+        }
+
+        return weight;
     }
 }
